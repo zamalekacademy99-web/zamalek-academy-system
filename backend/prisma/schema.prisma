@@ -1,0 +1,297 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  PARENT
+}
+
+enum PlayerStatus {
+  ACTIVE
+  SUSPENDED
+  WITHDRAWN
+  PENDING
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT_EXCUSED
+  ABSENT_UNEXCUSED
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+}
+
+enum RequestType {
+  ABSENCE_EXCUSE
+  FINANCIAL_REVIEW
+  GENERAL
+}
+
+enum RequestStatus {
+  NEW
+  IN_REVIEW
+  REPLIED
+  CLOSED
+}
+
+enum NotificationType {
+  ALERT
+  REMINDER
+  SYSTEM
+}
+
+model User {
+  id             String    @id @default(uuid()) @db.Uuid
+  email          String    @unique
+  password_hash  String
+  role           Role      @default(PARENT)
+  name           String
+  is_active      Boolean   @default(true)
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+
+  parent         Parent?
+  coach          Coach?
+  recorded_payments Payment[] @relation("RecordedPayments")
+  notifications  Notification[]
+  audit_logs     AuditLog[]
+
+  @@map("users")
+}
+
+model Parent {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @unique @db.Uuid
+  phone      String   @unique
+  address    String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  players    Player[]
+  requests   ParentRequest[]
+
+  @@map("parents")
+}
+
+model Branch {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  location   String?
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  coaches    Coach[]
+  groups     Group[]
+  players    Player[]
+  pricing_plans PricingPlan[]
+  schedules  Schedule[]
+
+  @@map("branches")
+}
+
+model Coach {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String?  @unique @db.Uuid
+  full_name  String
+  phone      String
+  branch_id  String   @db.Uuid
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user       User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  branch     Branch   @relation(fields: [branch_id], references: [id], onDelete: Restrict)
+  players    Player[]
+  schedules  Schedule[]
+  evaluations Evaluation[]
+
+  @@map("coaches")
+}
+
+model Group {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  branch_id    String   @db.Uuid
+  age_category String
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  branch       Branch   @relation(fields: [branch_id], references: [id], onDelete: Cascade)
+  players      Player[]
+  schedules    Schedule[]
+
+  @@map("groups")
+}
+
+model PricingPlan {
+  id         String   @id @default(uuid()) @db.Uuid
+  title      String
+  amount     Decimal  @db.Decimal(10, 2)
+  branch_id  String?  @db.Uuid
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  branch     Branch?  @relation(fields: [branch_id], references: [id], onDelete: Cascade)
+
+  @@map("pricing_plans")
+}
+
+model Player {
+  id                      String       @id @default(uuid()) @db.Uuid
+  first_name              String
+  last_name               String
+  dob                     DateTime     @db.Date
+  photo_url               String?
+  parent_id               String       @db.Uuid
+  branch_id               String       @db.Uuid
+  group_id                String       @db.Uuid
+  coach_id                String       @db.Uuid
+  status                  PlayerStatus @default(ACTIVE)
+  subscription_start_date DateTime     @db.Date
+  created_at              DateTime     @default(now())
+  updated_at              DateTime     @updatedAt
+
+  parent         Parent      @relation(fields: [parent_id], references: [id], onDelete: Restrict)
+  branch         Branch      @relation(fields: [branch_id], references: [id], onDelete: Restrict)
+  group          Group       @relation(fields: [group_id], references: [id], onDelete: Restrict)
+  coach          Coach       @relation(fields: [coach_id], references: [id], onDelete: Restrict)
+  attendance     Attendance[]
+  payments       Payment[]
+  evaluations    Evaluation[]
+  parent_requests ParentRequest[]
+
+  @@map("players")
+}
+
+model Schedule {
+  id          String   @id @default(uuid()) @db.Uuid
+  branch_id   String   @db.Uuid
+  group_id    String   @db.Uuid
+  coach_id    String   @db.Uuid
+  day_of_week Int      // 0-6 where 0=Sunday
+  start_time  String   // e.g., "16:00"
+  end_time    String   // e.g., "18:00"
+  field_name  String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  branch      Branch   @relation(fields: [branch_id], references: [id], onDelete: Cascade)
+  group       Group    @relation(fields: [group_id], references: [id], onDelete: Cascade)
+  coach       Coach    @relation(fields: [coach_id], references: [id], onDelete: Cascade)
+  attendance  Attendance[]
+
+  @@map("schedules")
+}
+
+model Attendance {
+  id          String           @id @default(uuid()) @db.Uuid
+  player_id   String           @db.Uuid
+  schedule_id String           @db.Uuid
+  date        DateTime         @db.Date
+  status      AttendanceStatus @default(PRESENT)
+  notes       String?          @db.Text
+  created_at  DateTime         @default(now())
+  updated_at  DateTime         @updatedAt
+
+  player      Player   @relation(fields: [player_id], references: [id], onDelete: Cascade)
+  schedule    Schedule @relation(fields: [schedule_id], references: [id], onDelete: Cascade)
+
+  @@unique([player_id, schedule_id, date])
+  @@map("attendance")
+}
+
+model Payment {
+  id           String        @id @default(uuid()) @db.Uuid
+  player_id    String        @db.Uuid
+  amount       Decimal       @db.Decimal(10, 2)
+  method       PaymentMethod
+  reference_no String?
+  receipt_url  String?
+  date         DateTime      @db.Date
+  recorded_by  String        @db.Uuid
+  notes        String?       @db.Text
+  created_at   DateTime      @default(now())
+  updated_at   DateTime      @updatedAt
+
+  player       Player @relation(fields: [player_id], references: [id], onDelete: Cascade)
+  recorder     User   @relation("RecordedPayments", fields: [recorded_by], references: [id], onDelete: Restrict)
+
+  @@map("payments")
+}
+
+model Evaluation {
+  id               String   @id @default(uuid()) @db.Uuid
+  player_id        String   @db.Uuid
+  coach_id         String   @db.Uuid
+  date             DateTime @db.Date
+  commitment_score Int      // 1-10
+  discipline_score Int      // 1-10
+  technical_score  Int      // 1-10
+  fitness_score    Int      // 1-10
+  notes            String?  @db.Text
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  player           Player @relation(fields: [player_id], references: [id], onDelete: Cascade)
+  coach            Coach  @relation(fields: [coach_id], references: [id], onDelete: Restrict)
+
+  @@map("evaluations")
+}
+
+model Notification {
+  id         String           @id @default(uuid()) @db.Uuid
+  user_id    String           @db.Uuid
+  title      String
+  message    String           @db.Text
+  type       NotificationType
+  is_read    Boolean          @default(false)
+  created_at DateTime         @default(now())
+
+  user       User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model ParentRequest {
+  id          String        @id @default(uuid()) @db.Uuid
+  parent_id   String        @db.Uuid
+  player_id   String?       @db.Uuid
+  type        RequestType
+  status      RequestStatus @default(NEW)
+  message     String        @db.Text
+  admin_reply String?       @db.Text
+  created_at  DateTime      @default(now())
+  updated_at  DateTime      @updatedAt
+
+  parent      Parent  @relation(fields: [parent_id], references: [id], onDelete: Cascade)
+  player      Player? @relation(fields: [player_id], references: [id], onDelete: SetNull)
+
+  @@map("parent_requests")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  action     String
+  entity     String
+  entity_id  String   @db.Uuid
+  details    Json?
+  created_at DateTime @default(now())
+
+  user       User @relation(fields: [user_id], references: [id], onDelete: Restrict)
+
+  @@map("audit_logs")
+}

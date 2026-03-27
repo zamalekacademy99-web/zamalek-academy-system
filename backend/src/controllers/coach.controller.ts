@@ -1,0 +1,74 @@
+import { Request, Response } from 'express';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+export const getAllCoaches = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { branch_id } = req.query;
+        const filter = branch_id ? { branch_id: String(branch_id), is_active: true } : { is_active: true };
+
+        const coaches = await prisma.coach.findMany({
+            where: filter,
+            include: { branch: true }
+        });
+
+        res.status(200).json({ status: 'success', data: coaches });
+    } catch (error) {
+        console.error('Error fetching coaches:', error);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+};
+
+export const createCoach = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { full_name, phone, branch_id } = req.body;
+        if (!full_name || !phone || !branch_id) {
+            res.status(400).json({ status: 'error', message: 'Missing required fields' });
+            return;
+        }
+
+        const newCoach = await prisma.coach.create({
+            data: { full_name, phone, branch_id }
+        });
+
+        res.status(201).json({ status: 'success', data: newCoach });
+    } catch (error) {
+        console.error('Error creating coach:', error);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+};
+
+export const updateCoach = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const { full_name, phone, branch_id, is_active } = req.body;
+
+        const updatedCoach = await prisma.coach.update({
+            where: { id: id as string },
+            data: { full_name, phone, branch_id, is_active }
+        });
+
+        res.status(200).json({ status: 'success', data: updatedCoach });
+    } catch (error) {
+        console.error('Error updating coach:', error);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+};
+
+export const deleteCoach = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+
+        // Soft delete
+        const softDeletedCoach = await prisma.coach.update({
+            where: { id: id as string },
+            data: { is_active: false }
+        });
+
+        res.status(200).json({ status: 'success', message: 'Coach soft deleted successfully', data: softDeletedCoach });
+    } catch (error) {
+        console.error('Error deleting coach:', error);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+};
