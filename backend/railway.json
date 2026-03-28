@@ -1,7 +1,8 @@
 {
+    "$schema": "https://railway.app/railway.schema.json",
     "build": {
         "builder": "NIXPACKS",
-        "buildCommand": "npm install && npm install --save-dev @types/node && npx prisma generate && npx tsc --project tsconfig.json"
+        "buildCommand": "npm install && npm install --save-dev typescript @types/node && npx prisma generate && npx tsc --project tsconfig.json"
     },
     "deploy": {
         "startCommand": "node dist/server.js",
