@@ -113,7 +113,7 @@ export const deleteCoach = async (req: Request, res: Response): Promise<void> =>
  * Standard slugifier to ensure emails are ASCII-only
  */
 const slugifyName = (name: string): string => {
-    return name
+    return String(name)
         .toLowerCase()
         .replace(/\s+/g, '.') // spaces to dots
         .replace(/[^\x00-\x7F]/g, "") // remove non-ascii (Arabic characters etc)
@@ -121,6 +121,7 @@ const slugifyName = (name: string): string => {
         .replace(/\.+/g, ".") // collapses multiple dots
         .replace(/^\.|\.$/g, ""); // strip leading/trailing dots
 };
+
 
 export const resetCoachPassword = async (req: Request, res: Response): Promise<void> => {
     try {
