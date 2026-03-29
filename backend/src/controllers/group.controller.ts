@@ -5,9 +5,13 @@ import prisma from '../db';
 
 export const getAllGroups = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { branch_id } = req.query;
+        const { branch_id, coach_id } = req.query;
 
-        const filter = branch_id ? { branch_id: String(branch_id) } : {};
+        const filter: any = {};
+        if (branch_id) filter.branch_id = String(branch_id);
+        if (coach_id) {
+            filter.coaches = { some: { id: String(coach_id) } };
+        }
 
         const groups = await prisma.group.findMany({
             where: filter,

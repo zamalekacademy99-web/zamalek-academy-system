@@ -32,6 +32,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         if ((user.role as string) === 'COACH') {
             const coach = await prisma.coach.findUnique({ where: { user_id: user.id } });
             coachId = coach?.id ?? null;
+            console.log(`[Auth] Coach Login: user=${user.email}, coach_id=${coachId}`);
+            if (!coachId) {
+                console.error(`[Auth] ERROR: User ${user.email} has COACH role but no Coach profile record!`);
+            }
         } else if ((user.role as string) === 'PARENT') {
             const parent = await prisma.parent.findUnique({ where: { user_id: user.id } });
             parentId = parent?.id ?? null;

@@ -68,21 +68,28 @@ export default function AddPaymentModal({ isOpen, onClose, onSuccess }: Props) {
             // 1. Determine Role
             let currentRole: "ADMIN" | "COACH" = "ADMIN";
 
-            const profileRes = await fetchApi('/coaches/profile').catch(() => null);
-            if (profileRes && profileRes.data && profileRes.data.id) {
+            // First check localStorage for coachId (set during login)
+            const storedCoachId = localStorage.getItem('coachId');
+            const userRaw = localStorage.getItem('user');
+            const user = userRaw ? JSON.parse(userRaw) : null;
+
+            if (user?.role === 'COACH' || storedCoachId) {
                 currentRole = "COACH";
                 setRole("COACH");
-                setCoachId(profileRes.data.id);
-                // For coach, fetch their groups immediately
-                setGroups(profileRes.data.groups || []);
-                console.log("[Modal] Role: COACH. Groups loaded:", profileRes.data.groups?.length);
+                const cid = storedCoachId || (user?.coachProfile?.id);
+                setCoachId(cid);
+
+                console.log("[Modal v1.6.0] Coach Mode. Fetching groups for coach:", cid);
+                // Fetch groups specifically assigned to this coach
+                const groupRes = await fetchApi(`/groups?coach_id=${cid}`);
+                setGroups(groupRes.data || []);
             } else {
                 setRole("ADMIN");
                 const branchRes = await fetchApi('/branches');
                 setBranches(branchRes.data || []);
             }
         } catch (error) {
-            console.error("[Modal] Init error:", error);
+            console.error("[Modal v1.6.0] Init error:", error);
         } finally {
             setLoading(false);
         }
@@ -112,6 +119,7 @@ export default function AddPaymentModal({ isOpen, onClose, onSuccess }: Props) {
     const handleGroupChange = async (groupId: string) => {
         setSelectedGroup(groupId);
         setFormData(prev => ({ ...prev, player_id: "" }));
+        setPlayers([]); // Clear players immediately until fetch completes
 
         if (!groupId) return;
 
@@ -121,22 +129,10 @@ export default function AddPaymentModal({ isOpen, onClose, onSuccess }: Props) {
     const fetchPlayersAction = async (groupId: string) => {
         setLoading(true);
         try {
-            console.log(`[Modal v1.5.3] SELECTED GROUP: ${groupId}`);
+            console.log(`[Modal v1.6.0] Fetching players for Group: ${groupId}`);
             const res = await fetchApi(`/players?group_id=${groupId}`);
-
-            if (!res.data || res.data.length === 0) {
-                console.warn(`[Modal v1.5.3] Group ${groupId} returned 0 players. Attempting COACH fallback...`);
-                if (coachId) {
-                    const fallbackRes = await fetchApi(`/players?coach_id=${coachId}`);
-                    setPlayers(fallbackRes.data || []);
-                    console.log(`[Modal v1.5.3] Fallback loaded ${fallbackRes.data?.length} players for coach ${coachId}`);
-                } else {
-                    setPlayers([]);
-                }
-            } else {
-                setPlayers(res.data);
-                console.log(`[Modal v1.5.3] Found ${res.data.length} players for group ${groupId}`);
-            }
+            setPlayers(res.data || []);
+            console.log(`[Modal v1.6.0] Found ${res.data?.length || 0} players`);
         } catch (err) {
             console.error("Failed to load players:", err);
         } finally {
@@ -180,13 +176,13 @@ export default function AddPaymentModal({ isOpen, onClose, onSuccess }: Props) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" dir="rtl">
             <div className="bg-white w-full max-w-lg rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-                <div className="p-8 bg-slate-900 text-white flex justify-between items-center">
+                <div className="p-8 bg-[#E60000] text-white flex justify-between items-center">
                     <div>
-                        <h2 className="text-xl font-black">تسجيل معاملة مالية (v1.5.3)</h2>
-                        <p className="text-slate-400 text-xs mt-1">تأكد من استلام المبلغ قبل الحفظ</p>
+                        <h2 className="text-xl font-black">تسجيل معاملة مالية (v1.6.0)</h2>
+                        <p className="text-white/60 text-xs mt-1">نظام المدربين المطور - اختيار بالتسلسل</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-xl transition">
-                        <XCircle className="w-6 h-6 text-slate-400" />
+                        <XCircle className="w-6 h-6 text-white" />
                     </button>
                 </div>
 
@@ -215,17 +211,20 @@ export default function AddPaymentModal({ isOpen, onClose, onSuccess }: Props) {
                             <div className={role === "COACH" ? "col-span-2" : ""}>
                                 <label className="block text-xs font-black text-slate-500 mb-2 mr-1 uppercase tracking-wider">المجموعة</label>
                                 <div className="relative">
-                                    <Layers className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                    <Layers className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#E60000]" />
                                     <select
                                         disabled={loading || (role === "ADMIN" && !selectedBranch)}
                                         value={selectedGroup}
                                         onChange={(e) => handleGroupChange(e.target.value)}
-                                        className="w-full pr-12 pl-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] focus:bg-white transition-all appearance-none font-bold text-slate-800 disabled:opacity-50"
+                                        className="w-full pr-12 pl-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] focus:bg-white transition-all appearance-none font-black text-slate-900 shadow-sm disabled:opacity-50"
                                     >
-                                        <option value="">{loading ? "جاري التحميل..." : (role === "COACH" ? "اختر المجموعة للبحث عن اللاعبين..." : "اختر المجموعة...")}</option>
+                                        <option value="">{loading && groups.length === 0 ? "جاري تحميل مجموعاتك..." : "اختر المجموعة لعرض اللاعبين..."}</option>
                                         {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                                     </select>
                                 </div>
+                                {role === "COACH" && groups.length === 0 && !loading && (
+                                    <p className="text-[10px] text-red-500 font-bold mt-1 mr-1">⚠️ لا توجد مجموعات مسجلة باسمك حالياً.</p>
+                                )}
                             </div>
                         </div>
 
@@ -240,24 +239,24 @@ export default function AddPaymentModal({ isOpen, onClose, onSuccess }: Props) {
                                     className="flex items-center gap-1 text-[10px] font-black text-blue-600 hover:text-blue-800 disabled:opacity-0 transition-opacity"
                                 >
                                     <RefreshCcw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
-                                    تحديث القائمة
+                                    تحديث
                                 </button>
                             </div>
                             <div className="relative">
-                                <User className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#E60000]" />
+                                <User className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                 <select
                                     required
                                     value={formData.player_id}
                                     onChange={(e) => setFormData(prev => ({ ...prev, player_id: e.target.value }))}
-                                    className="w-full pr-12 pl-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] focus:bg-white transition-all appearance-none font-black text-slate-900 border-l-[#E60000]"
+                                    className="w-full pr-12 pl-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] focus:bg-white transition-all appearance-none font-black text-slate-900"
                                     disabled={loading || !selectedGroup}
                                 >
-                                    <option value="">{!selectedGroup ? "يرجى اختيار المجموعة أولاً" : "اختر اللاعب من القائمة..."}</option>
+                                    <option value="">{!selectedGroup ? "يرجى اختيار المجموعة أولاً" : (loading ? "جاري تحميل اللاعبين..." : "اختر اللاعب...")}</option>
                                     {players.map(pl => (
                                         <option key={pl.id} value={pl.id}>{pl.first_name} {pl.last_name}</option>
                                     ))}
                                     {!loading && selectedGroup && players.length === 0 && (
-                                        <option value="" disabled className="text-red-500 font-black">❌ لا يوجد لاعبين متاحين</option>
+                                        <option value="" disabled className="text-red-500 font-black">❌ لا يوجد لاعبين لهذه المجموعة</option>
                                     )}
                                 </select>
                             </div>
