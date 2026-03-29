@@ -28,6 +28,12 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
         const token = generateToken({ id: user.id, role: user.role });
 
+        let coachId = null;
+        if (user.role === 'COACH') {
+            const coach = await prisma.coach.findUnique({ where: { user_id: user.id } });
+            coachId = coach?.id;
+        }
+
         res.status(200).json({
             status: 'success',
             data: {
@@ -37,9 +43,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
                     name: user.name,
                     email: user.email,
                     role: user.role,
+                    coachId, // Associated coach ID
                 },
             },
         });
+
     } catch (error: any) {
         console.error('Login error details:', error);
 

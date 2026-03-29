@@ -65,7 +65,10 @@ export default function LoginPage() {
         localStorage.setItem('token', res.data.token);
         localStorage.setItem('user', JSON.stringify(res.data.user));
 
-        router.push(redirectPath);
+        if (res.data.user.coachId) {
+          localStorage.setItem('adminViewCoachId', res.data.user.coachId);
+        }
+
       }
     } catch (err: any) {
       setError(err.message || 'بيانات الدخول غير صحيحة، يرجى المحاولة مرة أخرى.');

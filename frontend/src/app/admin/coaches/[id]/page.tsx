@@ -172,7 +172,24 @@ export default function AdminCoachProfilePage() {
                             <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-xl p-4 leading-relaxed font-semibold">
                                 💡 ملاحظة: كلمة المرور الافتراضية هي رقم الهاتف المسجل للمدرب. يمكن للمدرب تغييرها لاحقاً.
                             </div>
+
+                            <button
+                                onClick={async () => {
+                                    if (!id || !confirm("هل أنت متأكد من إعادة تعيين كلمة المرور لرقم الهاتف؟")) return;
+                                    try {
+                                        await fetchApi(`/coaches/${id}/reset-password`, { method: "POST" });
+                                        showToast("تم إعادة تعيين كلمة المرور بنجاح! 🔑");
+                                        load();
+                                    } catch (err: any) {
+                                        showToast("فشل: " + err.message, "error");
+                                    }
+                                }}
+                                className="w-full py-2 bg-slate-900 text-white rounded-xl text-xs font-black hover:bg-slate-800 transition shadow-sm mt-2"
+                            >
+                                إعادة تعيين كلمة المرور (Reset)
+                            </button>
                         </div>
+
                     ) : (
                         <div className="py-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-300 space-y-5">
                             <div className="space-y-2">

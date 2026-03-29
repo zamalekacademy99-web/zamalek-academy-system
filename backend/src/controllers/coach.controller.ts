@@ -109,6 +109,50 @@ export const deleteCoach = async (req: Request, res: Response): Promise<void> =>
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
+/**
+ * Standard slugifier to ensure emails are ASCII-only
+ */
+const slugifyName = (name: string): string => {
+    return name
+        .toLowerCase()
+        .replace(/\s+/g, '.') // spaces to dots
+        .replace(/[^\x00-\x7F]/g, "") // remove non-ascii (Arabic characters etc)
+        .replace(/[^a-z0-9.]/g, "") // remove special chars except dots
+        .replace(/\.+/g, ".") // collapses multiple dots
+        .replace(/^\.|\.$/g, ""); // strip leading/trailing dots
+};
+
+export const resetCoachPassword = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const coach = await prisma.coach.findUnique({
+            where: { id: String(id) },
+            include: { user: true }
+        });
+
+        if (!coach || !coach.user_id) {
+            res.status(404).json({ status: 'error', message: 'Coach user account not found.' });
+            return;
+        }
+
+        const password = coach.phone || "12345678"; // Reset to phone number
+        const passwordHash = await bcrypt.hash(password, 10);
+
+        await prisma.user.update({
+            where: { id: coach.user_id },
+            data: {
+                password_hash: passwordHash,
+                plain_password: password
+            }
+        });
+
+        res.status(200).json({ status: 'success', message: 'Password reset to phone number successfully!' });
+    } catch (error: any) {
+        console.error('Error resetting password:', error);
+        res.status(500).json({ status: 'error', message: error.message || 'Internal server error' });
+    }
+};
+
 export const createCoachAccount = async (req: Request, res: Response): Promise<void> => {
     try {
         const { id } = req.params;
@@ -127,10 +171,10 @@ export const createCoachAccount = async (req: Request, res: Response): Promise<v
             return;
         }
 
-        // Generate email: full_name.random@zamalek-academy.local
-        const cleanName = coach.full_name.toLowerCase().replace(/\s+/g, '.');
+        // Generate email: normalized_name.random@zamalek-academy.local
+        const normalized = slugifyName(coach.full_name);
         const shortId = Math.random().toString(36).substring(2, 5);
-        const email = `${cleanName}.${shortId}@zamalek-academy.local`;
+        const email = `${normalized || 'coach'}.${shortId}@zamalek-academy.local`;
         const password = coach.phone; // Use phone as plain_password
         const passwordHash = await bcrypt.hash(password, 10);
 
@@ -156,3 +200,4 @@ export const createCoachAccount = async (req: Request, res: Response): Promise<v
         res.status(500).json({ status: 'error', message: error.message || 'Internal server error' });
     }
 };
+

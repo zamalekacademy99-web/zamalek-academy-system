@@ -1,9 +1,10 @@
 import { Router } from 'express';
-import { getAllCoaches, getCoachById, createCoach, updateCoach, deleteCoach, createCoachAccount } from '../controllers/coach.controller';
+import { getAllCoaches, getCoachById, createCoach, updateCoach, deleteCoach, createCoachAccount, resetCoachPassword } from '../controllers/coach.controller';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 import type { Request, Response } from 'express';
 
 const router = Router();
+
 
 // Diagnostic: test this path is reachable without auth
 router.get('/test-me', (_req: Request, res: Response) => {
@@ -19,6 +20,9 @@ router.delete('/:id', authenticate, authorize(['SUPER_ADMIN']), deleteCoach);
 // Auto-create login account for a coach
 router.post('/:id/account', authenticate, authorize(['ADMIN', 'SUPER_ADMIN']), createCoachAccount);
 router.post('/:id/create-account', authenticate, authorize(['ADMIN', 'SUPER_ADMIN']), createCoachAccount);
+
+// Reset coach password to phone number
+router.post('/:id/reset-password', authenticate, authorize(['ADMIN', 'SUPER_ADMIN']), resetCoachPassword);
 
 
 export default router;
