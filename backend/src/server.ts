@@ -1,5 +1,5 @@
-// REBUILD_TRIGGER_TIME: 2026-03-29_22:10
-// Build Version: 1.0.9 - Notification & Financial Overhaul v1.4.0
+// REBUILD_TRIGGER_TIME: 2026-03-29_22:15
+// Build Version: 1.0.9 - Notification & Financial Overhaul v1.4.2
 import 'dotenv/config';
 import express from 'express';
 import type { Request, Response } from 'express';

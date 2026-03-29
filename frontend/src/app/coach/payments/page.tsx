@@ -2,10 +2,9 @@
 import { useState, useEffect } from "react";
 import { fetchApi } from "@/lib/api";
 import {
-    Plus, Search, DollarSign,
-    Calendar, User, CreditCard,
-    Loader2, CheckCircle2, XCircle, Tag
+    Plus, DollarSign, User, Loader2
 } from "lucide-react";
+import AddPaymentModal from "@/components/modals/AddPaymentModal";
 
 const ARABIC_MONTHS = [
     "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
@@ -21,40 +20,18 @@ const CATEGORIES = [
 
 export default function CoachPaymentsPage() {
     const [payments, setPayments] = useState<any[]>([]);
-    const [players, setPlayers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
-
-    // Form State
-    const [formData, setFormData] = useState({
-        player_id: "",
-        amount: "",
-        method: "CASH",
-        category: "MONTHLY_FEE",
-        notes: "",
-        month: (new Date().getMonth() + 1).toString(),
-        year: new Date().getFullYear().toString()
-    });
 
     const loadData = async () => {
         setLoading(true);
         try {
-            // 1. Get Coach Profile
             const profileRes = await fetchApi('/coaches/profile');
-            const coachId = profileRes.data.id;
             const userId = profileRes.data.user_id;
 
-            console.log("DEBUG: Loading data for Coach ID:", coachId);
-
-            // 2. Fetch payments recorded by this coach
+            // Fetch payments recorded by this coach
             const payRes = await fetchApi(`/payments?recorder_id=${userId}`);
             setPayments(payRes.data || []);
-
-            // 3. Fetch players ONLY for this coach
-            const playerRes = await fetchApi(`/players?coach_id=${coachId}`);
-            console.log("DEBUG: Fetched Players:", playerRes.data);
-            setPlayers(playerRes.data || []);
         } catch (err) {
             console.error("Failed to load payments data:", err);
         } finally {
@@ -63,53 +40,6 @@ export default function CoachPaymentsPage() {
     };
 
     useEffect(() => { loadData(); }, []);
-
-    // Handle form changes with auto-pricing for Kit & Bag
-    const handleFormChange = (field: string, value: string) => {
-        setFormData(prev => {
-            const newState = { ...prev, [field]: value };
-
-            // Auto-pricing logic
-            if (field === 'category' && value === 'KIT_BAG') {
-                newState.amount = "0";
-            }
-
-            return newState;
-        });
-    };
-
-    const handleRecordPayment = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!formData.player_id || !formData.amount) return;
-
-        setSubmitting(true);
-        try {
-            await fetchApi('/payments', {
-                method: 'POST',
-                body: JSON.stringify({
-                    player_id: formData.player_id,
-                    amount: parseFloat(formData.amount),
-                    method: formData.method,
-                    category: formData.category,
-                    notes: formData.notes,
-                    period_month: parseInt(formData.month),
-                    period_year: parseInt(formData.year)
-                })
-            });
-            setShowModal(false);
-            setFormData({
-                ...formData,
-                player_id: "",
-                amount: "",
-                notes: ""
-            });
-            loadData();
-        } catch (err) {
-            alert("فشل تسجيل الدفعة: " + (err as any).message);
-        } finally {
-            setSubmitting(false);
-        }
-    };
 
     if (loading) {
         return (
@@ -191,145 +121,11 @@ export default function CoachPaymentsPage() {
                 </div>
             </div>
 
-            {/* Record Payment Modal */}
-            {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white w-full max-w-lg rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 text-right">
-                        <div className="p-8 bg-slate-900 text-white flex justify-between items-center flex-row-reverse">
-                            <div>
-                                <h2 className="text-xl font-black">تسجيل معاملة مالية</h2>
-                                <p className="text-slate-400 text-xs mt-1">تأكد من استلام المبلغ قبل الحفظ</p>
-                            </div>
-                            <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-xl transition">
-                                <XCircle className="w-6 h-6" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleRecordPayment} className="p-8 space-y-6">
-                            <div className="space-y-4">
-                                {/* Player Selection */}
-                                <div>
-                                    <label className="block text-xs font-black text-slate-500 mb-2 mr-1 tracking-wider uppercase">اختيار اللاعب</label>
-                                    <div className="relative">
-                                        <User className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                        <select
-                                            required
-                                            value={formData.player_id}
-                                            onChange={(e) => handleFormChange('player_id', e.target.value)}
-                                            className="w-full pr-12 pl-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] focus:bg-white transition-all appearance-none font-bold text-slate-800"
-                                        >
-                                            <option value="">اختر اللاعب من القائمة...</option>
-                                            {players.map(pl => (
-                                                <option key={pl.id} value={pl.id}>{pl.first_name} {pl.last_name} ({pl.group?.name})</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                {/* Category Selection */}
-                                <div>
-                                    <label className="block text-xs font-black text-slate-500 mb-2 mr-1 tracking-wider uppercase">نوع الدفعة</label>
-                                    <div className="relative">
-                                        <Tag className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                        <select
-                                            value={formData.category}
-                                            onChange={(e) => handleFormChange('category', e.target.value)}
-                                            className="w-full pr-12 pl-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] focus:bg-white transition-all appearance-none font-bold text-slate-800"
-                                        >
-                                            {CATEGORIES.map(cat => (
-                                                <option key={cat.id} value={cat.id}>{cat.label}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                {/* Month & Year Selection */}
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-black text-slate-500 mb-2 mr-1 tracking-wider uppercase">شهر الاشتراك</label>
-                                        <div className="relative">
-                                            <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                            <select
-                                                value={formData.month}
-                                                onChange={(e) => handleFormChange('month', e.target.value)}
-                                                className="w-full pr-12 pl-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] focus:bg-white transition-all appearance-none font-bold text-slate-800"
-                                            >
-                                                {ARABIC_MONTHS.map((m, i) => (
-                                                    <option key={i} value={i + 1}>{m}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-black text-slate-500 mb-2 mr-1 tracking-wider uppercase">السنة</label>
-                                        <div className="relative">
-                                            <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                            <select
-                                                value={formData.year}
-                                                onChange={(e) => handleFormChange('year', e.target.value)}
-                                                className="w-full pr-12 pl-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] focus:bg-white transition-all appearance-none font-bold text-slate-800"
-                                            >
-                                                <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>
-                                                <option value={new Date().getFullYear() + 1}>{new Date().getFullYear() + 1}</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-black text-slate-500 mb-2 mr-1 tracking-wider uppercase">المبلغ (ج.م)</label>
-                                        <div className="relative">
-                                            <DollarSign className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
-                                            <input
-                                                type="number"
-                                                required
-                                                placeholder="0.00"
-                                                value={formData.amount}
-                                                onChange={(e) => handleFormChange('amount', e.target.value)}
-                                                className="w-full pr-12 pl-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] focus:bg-white transition-all font-black text-lg text-slate-800"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-black text-slate-500 mb-2 mr-1 tracking-wider uppercase">طريقة الدفع</label>
-                                        <div className="relative">
-                                            <CreditCard className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500" />
-                                            <select
-                                                value={formData.method}
-                                                onChange={(e) => handleFormChange('method', e.target.value)}
-                                                className="w-full pr-12 pl-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] focus:bg-white transition-all appearance-none font-bold text-slate-800"
-                                            >
-                                                <option value="CASH">نقدي</option>
-                                                <option value="BANK_TRANSFER">تحويل بنكي</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-black text-slate-500 mb-2 mr-1 tracking-wider uppercase">ملاحظات إضافية</label>
-                                    <textarea
-                                        rows={2}
-                                        value={formData.notes}
-                                        onChange={(e) => handleFormChange('notes', e.target.value)}
-                                        className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] focus:bg-white transition-all font-medium text-slate-800"
-                                        placeholder="مثال: دفعة شاملة"
-                                    />
-                                </div>
-                            </div>
-
-                            <button
-                                type="submit"
-                                disabled={submitting}
-                                className="w-full py-5 bg-[#E60000] text-white rounded-2xl font-black text-lg shadow-xl shadow-red-500/20 hover:bg-black transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-                            >
-                                {submitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <><CheckCircle2 className="w-6 h-6" /> حفظ وتسجيل المعاملة</>}
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            )}
+            <AddPaymentModal
+                isOpen={showModal}
+                onClose={() => setShowModal(false)}
+                onSuccess={loadData}
+            />
         </div>
     );
 }
