@@ -36,7 +36,8 @@ function EvaluateContent() {
     const params = useParams();
     const router = useRouter();
     const coachId = useCoachId();
-    const playerId = params?.playerId as string;
+    // Matches folder name [id]
+    const id = (params?.id as string) || (params?.playerId as string);
 
     const [player, setPlayer] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -53,18 +54,22 @@ function EvaluateContent() {
     const [notes, setNotes] = useState("");
 
     useEffect(() => {
-        if (!playerId) return;
+        console.log('[EvaluatePage] params:', params, '=> id:', id, 'coachId:', coachId);
+        if (!id) {
+            setError('لم يتم تحديد معرّف اللاعب.');
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         setError(null);
-        // Use the coach portal player endpoint which allows coach + admin access
-        fetchApi(`/coach/players/${playerId}`)
+        fetchApi(`/coach/players/${id}`)
             .then(res => {
                 if (res.success) setPlayer(res.data);
-                else setError(res.message || "لم يتم العثور على اللاعب");
+                else setError(res.message || 'لم يتم العثور على اللاعب');
             })
-            .catch(err => setError(err.message || "تعذر تحميل بيانات اللاعب"))
+            .catch(err => setError(err.message || 'تعذر تحميل بيانات اللاعب'))
             .finally(() => setLoading(false));
-    }, [playerId]);
+    }, [id]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -74,7 +79,7 @@ function EvaluateContent() {
             await fetchApi('/coach/evaluate', {
                 method: 'POST',
                 body: JSON.stringify({
-                    player_id: playerId,
+                    player_id: id,
                     coach_id: coachId,
                     date: new Date().toISOString().split('T')[0],
                     ...scores,
@@ -82,9 +87,8 @@ function EvaluateContent() {
                 })
             });
             setSuccess(true);
-            // Real-time sync: refresh and redirect after 2s
             router.refresh();
-            setTimeout(() => router.push(`/coach/evaluations/${coachId ? `?coachId=${coachId}` : ""}`), 2000);
+            setTimeout(() => router.push(`/coach/evaluations${coachId ? `?coachId=${coachId}` : ""}`), 2000);
         } catch (err: any) {
             setError(err.message || 'حدث خطأ أثناء الإرسال');
         } finally {
