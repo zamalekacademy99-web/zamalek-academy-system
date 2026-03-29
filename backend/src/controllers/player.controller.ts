@@ -102,35 +102,30 @@ export const registerPlayer = async (req: Request, res: Response): Promise<void>
 export const getAllPlayers = async (req: Request, res: Response): Promise<void> => {
     try {
         const { branch_id, coach_id, group_id } = req.query;
-        const filter: any = {};
-        if (branch_id) filter.branch_id = String(branch_id);
-        if (group_id) {
-            console.log(`[API] Fetching players for Group ID: ${group_id}`);
-            filter.group_id = String(group_id);
-        }
+        let filter: any = {};
 
-        if (coach_id) {
-            const coach = await prisma.coach.findUnique({
-                where: { id: String(coach_id) },
-                include: { groups: true }
-            });
-            const groupIds = coach?.groups.map(g => g.id) || [];
+        // EMERGENCY OVERRIDE (v1.5.3): If group_id is provided, prioritize it above all else
+        if (group_id && group_id !== 'undefined') {
+            console.log(`[API v1.5.3] HARD OVERRIDE: Fetching players for Group ID: ${group_id}`);
+            filter = { group_id: String(group_id) };
+        } else {
+            console.log(`[API v1.5.3] Normal Fetch: branch=${branch_id}, coach=${coach_id}`);
+            if (branch_id) filter.branch_id = String(branch_id);
+            if (coach_id) {
+                const coach = await prisma.coach.findUnique({
+                    where: { id: String(coach_id) },
+                    include: { groups: true }
+                });
+                const groupIds = coach?.groups.map(g => g.id) || [];
 
-            console.log(`[API] Fetching players for coach: ${coach_id} | coachGroups: ${groupIds.length} | Branch: ${coach?.branch_id}`);
-
-            if (groupIds.length > 0) {
-                // If coach has groups, we respect the group_id if provided via the filter above,
-                // otherwise we allow their full access.
-                if (!group_id) {
+                if (groupIds.length > 0) {
                     filter.OR = [
                         { coach_id: String(coach_id) },
                         { group_id: { in: groupIds } }
                     ];
+                } else {
+                    filter.branch_id = coach?.branch_id;
                 }
-            } else if (!group_id) {
-                // Fallback for unassigned coaches: show all players in their branch
-                console.log(`[API] Coach ${coach_id} has no groups. Falling back to branch ${coach?.branch_id}`);
-                filter.branch_id = coach?.branch_id;
             }
         }
 
@@ -144,7 +139,7 @@ export const getAllPlayers = async (req: Request, res: Response): Promise<void> 
             }
         });
 
-        console.log(`[API] Players found for query: ${players.length}`);
+        console.log(`[API v1.5.3] Query Result: Found ${players.length} players for filter:`, JSON.stringify(filter));
 
         res.status(200).json({ status: 'success', data: players });
     } catch (error) {

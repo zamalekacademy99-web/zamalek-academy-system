@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import {
     XCircle, Loader2, CheckCircle2,
     User, Calendar, CreditCard, Tag, DollarSign,
-    Layers, MapPin
+    Layers, MapPin, RefreshCcw
 } from "lucide-react";
 import { fetchApi } from "@/lib/api";
 
@@ -27,6 +27,7 @@ interface Props {
 
 export default function AddPaymentModal({ isOpen, onClose, onSuccess }: Props) {
     const [role, setRole] = useState<"ADMIN" | "COACH" | null>(null);
+    const [coachId, setCoachId] = useState<string | null>(null);
     const [branches, setBranches] = useState<any[]>([]);
     const [groups, setGroups] = useState<any[]>([]);
     const [players, setPlayers] = useState<any[]>([]);
@@ -71,6 +72,7 @@ export default function AddPaymentModal({ isOpen, onClose, onSuccess }: Props) {
             if (profileRes && profileRes.data && profileRes.data.id) {
                 currentRole = "COACH";
                 setRole("COACH");
+                setCoachId(profileRes.data.id);
                 // For coach, fetch their groups immediately
                 setGroups(profileRes.data.groups || []);
                 console.log("[Modal] Role: COACH. Groups loaded:", profileRes.data.groups?.length);
@@ -113,11 +115,28 @@ export default function AddPaymentModal({ isOpen, onClose, onSuccess }: Props) {
 
         if (!groupId) return;
 
+        await fetchPlayersAction(groupId);
+    };
+
+    const fetchPlayersAction = async (groupId: string) => {
         setLoading(true);
         try {
+            console.log(`[Modal v1.5.3] SELECTED GROUP: ${groupId}`);
             const res = await fetchApi(`/players?group_id=${groupId}`);
-            setPlayers(res.data || []);
-            console.log(`[Modal] Players loaded for group ${groupId}:`, res.data?.length);
+
+            if (!res.data || res.data.length === 0) {
+                console.warn(`[Modal v1.5.3] Group ${groupId} returned 0 players. Attempting COACH fallback...`);
+                if (coachId) {
+                    const fallbackRes = await fetchApi(`/players?coach_id=${coachId}`);
+                    setPlayers(fallbackRes.data || []);
+                    console.log(`[Modal v1.5.3] Fallback loaded ${fallbackRes.data?.length} players for coach ${coachId}`);
+                } else {
+                    setPlayers([]);
+                }
+            } else {
+                setPlayers(res.data);
+                console.log(`[Modal v1.5.3] Found ${res.data.length} players for group ${groupId}`);
+            }
         } catch (err) {
             console.error("Failed to load players:", err);
         } finally {
@@ -163,7 +182,7 @@ export default function AddPaymentModal({ isOpen, onClose, onSuccess }: Props) {
             <div className="bg-white w-full max-w-lg rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                 <div className="p-8 bg-slate-900 text-white flex justify-between items-center">
                     <div>
-                        <h2 className="text-xl font-black">تسجيل معاملة مالية</h2>
+                        <h2 className="text-xl font-black">تسجيل معاملة مالية (v1.5.3)</h2>
                         <p className="text-slate-400 text-xs mt-1">تأكد من استلام المبلغ قبل الحفظ</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-xl transition">
@@ -212,7 +231,18 @@ export default function AddPaymentModal({ isOpen, onClose, onSuccess }: Props) {
 
                         {/* Player Selection */}
                         <div>
-                            <label className="block text-xs font-black text-slate-500 mb-2 mr-1 tracking-wider uppercase underline decoration-[#E60000] decoration-2 underline-offset-4">اختيار اللاعب</label>
+                            <div className="flex justify-between items-center mb-2 mr-1">
+                                <label className="block text-xs font-black text-slate-500 tracking-wider uppercase underline decoration-[#E60000] decoration-2 underline-offset-4">اختيار اللاعب</label>
+                                <button
+                                    type="button"
+                                    onClick={() => selectedGroup && fetchPlayersAction(selectedGroup)}
+                                    disabled={loading || !selectedGroup}
+                                    className="flex items-center gap-1 text-[10px] font-black text-blue-600 hover:text-blue-800 disabled:opacity-0 transition-opacity"
+                                >
+                                    <RefreshCcw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+                                    تحديث القائمة
+                                </button>
+                            </div>
                             <div className="relative">
                                 <User className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#E60000]" />
                                 <select
@@ -227,7 +257,7 @@ export default function AddPaymentModal({ isOpen, onClose, onSuccess }: Props) {
                                         <option key={pl.id} value={pl.id}>{pl.first_name} {pl.last_name}</option>
                                     ))}
                                     {!loading && selectedGroup && players.length === 0 && (
-                                        <option value="" disabled className="text-red-500 font-black">❌ لا يوجد لاعبين متاحين في هذه المجموعة</option>
+                                        <option value="" disabled className="text-red-500 font-black">❌ لا يوجد لاعبين متاحين</option>
                                     )}
                                 </select>
                             </div>
