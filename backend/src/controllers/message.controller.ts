@@ -1,44 +1,55 @@
 import { Request, Response } from 'express';
 import prisma from '../db';
 
-// POST /api/v1/messages  — Admin sends a message to a parent
-export const sendMessageToParent = async (req: Request, res: Response) => {
+// Use prisma as any to allow new models (parentMessage) that exist in schema
+// but may not be reflected in local client types until db push runs in Railway
+const db = prisma as any;
+
+// POST /api/v1/messages  — Admin/Coach sends a message to a parent
+export const sendMessageToParent = async (req: Request, res: Response): Promise<void> => {
     try {
         const { parent_id, player_id, message } = req.body;
-        if (!parent_id || !message) return res.status(400).json({ success: false, message: 'Missing parent_id or message' });
+        if (!parent_id || !message) {
+            res.status(400).json({ success: false, message: 'Missing parent_id or message' });
+            return;
+        }
 
-        const msg = await prisma.parentMessage.create({
-            data: { parent_id, player_id: player_id || null, message }
+        const msg = await db.parentMessage.create({
+            data: {
+                parent_id: String(parent_id),
+                player_id: player_id ? String(player_id) : null,
+                message: String(message)
+            }
         });
 
-        return res.status(201).json({ success: true, data: msg });
+        res.status(201).json({ success: true, data: msg });
     } catch (err: any) {
-        return res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: err.message });
     }
 };
 
 // GET /api/v1/messages/parent/:parentId
-export const getMessagesForParent = async (req: Request, res: Response) => {
+export const getMessagesForParent = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { parentId } = req.params;
-        const messages = await prisma.parentMessage.findMany({
+        const parentId = String(req.params.parentId);
+        const messages = await db.parentMessage.findMany({
             where: { parent_id: parentId },
             orderBy: { created_at: 'desc' },
             include: { player: { select: { first_name: true, last_name: true } } }
         });
-        return res.json({ success: true, data: messages });
+        res.json({ success: true, data: messages });
     } catch (err: any) {
-        return res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: err.message });
     }
 };
 
 // PATCH /api/v1/messages/:id/read
-export const markMessageRead = async (req: Request, res: Response) => {
+export const markMessageRead = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { id } = req.params;
-        await prisma.parentMessage.update({ where: { id }, data: { is_read: true } });
-        return res.json({ success: true });
+        const id = String(req.params.id);
+        await db.parentMessage.update({ where: { id }, data: { is_read: true } });
+        res.json({ success: true });
     } catch (err: any) {
-        return res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: err.message });
     }
 };
