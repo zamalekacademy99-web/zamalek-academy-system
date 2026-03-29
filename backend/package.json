@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/server.js",
   "engines": {
-    "node": "22.12.0"
+    "node": ">=22.11.0"
   },
   "scripts": {
     "dev": "nodemon --exec \"ts-node -r dotenv/config\" src/server.ts",
@@ -21,7 +21,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@prisma/client": "^7.6.0",
+    "@prisma/client": "^6.4.1",
     "@types/node": "^25.5.0",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
@@ -37,7 +37,7 @@
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "nodemon": "^3.1.14",
-    "prisma": "^7.6.0",
+    "prisma": "^6.4.1",
     "ts-node": "^10.9.2"
   }
 }
