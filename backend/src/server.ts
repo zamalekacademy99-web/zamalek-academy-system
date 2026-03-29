@@ -1,4 +1,4 @@
-// Build Version: 1.0.9 - Notification Update
+// VERSION 1.1.0 - MASTER_SYNC
 import 'dotenv/config';
 import express from 'express';
 import type { Request, Response } from 'express';
@@ -77,7 +77,7 @@ app.get('/api/v1/health', (_req: Request, res: Response) => {
         message: 'Zamalek Academy API is running',
         port: String(port),
         env: process.env.NODE_ENV || 'development',
-        version: '1.0.9',
+        version: '1.1.0',
         timestamp: new Date().toISOString()
     });
 });

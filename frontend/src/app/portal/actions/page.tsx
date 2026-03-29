@@ -32,7 +32,7 @@ export default function ActionsPage() {
         setStatus(null);
 
         try {
-            await fetchApi("/parent/request", {
+            await fetchApi("/notifications/parent-request", {
                 method: "POST",
                 body: JSON.stringify(formData)
             });

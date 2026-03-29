@@ -1,11 +1,12 @@
 import { Request, Response } from 'express';
 
+import { Role } from '@prisma/client';
 import prisma from '../db';
 
 
 export const sendNotification = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { title, message, type, targetType, targetId } = req.body;
+        const { title, message, type, targetType, targetId, priority } = req.body;
 
         if (!title || !message) {
             res.status(400).json({ status: 'error', message: 'Title and message are required' });
@@ -15,7 +16,10 @@ export const sendNotification = async (req: Request, res: Response): Promise<voi
         let userIds: string[] = [];
 
         if (targetType === 'ALL') {
-            const users = await prisma.user.findMany({ where: { role: 'PARENT' }, select: { id: true } });
+            const users = await prisma.user.findMany({ where: { role: 'PARENT' as Role }, select: { id: true } });
+            userIds = users.map(u => u.id);
+        } else if (targetType === 'COACHES') {
+            const users = await prisma.user.findMany({ where: { role: 'COACH' as Role }, select: { id: true } });
             userIds = users.map(u => u.id);
         } else if (targetType === 'BRANCH' && targetId) {
             const players = await prisma.player.findMany({
@@ -46,6 +50,7 @@ export const sendNotification = async (req: Request, res: Response): Promise<voi
             title,
             message,
             type: type || 'ALERT',
+            priority: priority || 'NORMAL',
             is_read: false
         }));
 
