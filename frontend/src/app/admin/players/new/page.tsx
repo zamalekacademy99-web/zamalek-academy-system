@@ -28,6 +28,7 @@ export default function RegisterPlayerPage() {
         coach_id: "",
         parent_phone: "",
         parent_name: "",
+        parent_email: "",
         payment_amount: "",
         payment_method: "CASH"
     });
