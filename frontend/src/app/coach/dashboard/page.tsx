@@ -1,19 +1,17 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { CalendarDays, Users, ChevronLeft, ShieldAlert } from "lucide-react";
+import { useCoachId } from "@/hooks/useCoachId";
+import { CalendarDays, Users, ChevronLeft, ShieldAlert, Loader2 } from "lucide-react";
 import { fetchApi } from "@/lib/api";
 
 const DAYS = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 
-export default function CoachDashboardPage() {
+function DashboardContent() {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
-    const searchParams = useSearchParams();
-    const coachId = searchParams.get("coachId");
+    const coachId = useCoachId();
 
     useEffect(() => {
         const url = coachId ? `/coach/dashboard?coachId=${coachId}` : '/coach/dashboard';
@@ -23,8 +21,18 @@ export default function CoachDashboardPage() {
             .finally(() => setLoading(false));
     }, [coachId]);
 
-    if (loading) return <div className="p-8 text-center text-slate-500">جاري تحميل البيانات...</div>;
-    if (error) return <div className="p-8 text-center text-red-500 bg-red-50 rounded-xl">{error}</div>;
+    if (loading) return (
+        <div className="flex flex-col items-center justify-center p-20 space-y-4">
+            <Loader2 className="w-10 h-10 animate-spin text-[#E60000]" />
+            <p className="text-slate-500 font-bold">جاري تحميل بيانات المدرب...</p>
+        </div>
+    );
+
+    if (error) return (
+        <div className="p-8 text-center text-red-600 bg-red-50 border border-red-200 rounded-2xl font-bold">
+            ⚠️ {error}
+        </div>
+    );
 
     const coach = data;
     const todayIdx = new Date().getDay();
@@ -32,40 +40,40 @@ export default function CoachDashboardPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-bold text-slate-900">أهلاً، {coach?.full_name} 👋</h1>
-                <p className="text-slate-500 text-sm mt-1">
-                    {DAYS[todayIdx]} - فرع <span className="font-semibold text-[#E60000]">{coach?.branch}</span>
+                <h1 className="text-2xl font-black text-slate-900">أهلاً، {coach?.full_name} 👋</h1>
+                <p className="text-slate-500 text-sm mt-1 font-semibold">
+                    {DAYS[todayIdx]} - فرع <span className="text-[#E60000]">{coach?.branch}</span>
                 </p>
             </div>
 
             {coachId && (
-                <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-bold shadow-sm">
-                    <ShieldAlert className="w-5 h-5 text-amber-600" />
-                    تحذير: أنت تشاهد الآن بوابة المدرب (وضع الإدارة). أي حضور أو تقييم سيتم تسجيله باسم هذا المدرب.
+                <div className="bg-amber-50 border-2 border-amber-200 text-amber-900 px-5 py-4 rounded-2xl flex items-center gap-4 text-sm font-black shadow-lg animate-pulse">
+                    <ShieldAlert className="w-6 h-6 text-amber-600 flex-shrink-0" />
+                    <p>وضع الإدارة: أنت تشاهد الآن بوابة المدرب. سيتم تسجيل أي حضور أو تقييم باسم هذا المدرب.</p>
                 </div>
             )}
 
             {/* Today's Sessions */}
             <section>
-                <h2 className="text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
-                    <CalendarDays className="w-4 h-4 text-[#E60000]" /> جلسات اليوم
+                <h2 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
+                    <CalendarDays className="w-5 h-5 text-[#E60000]" /> جلسات اليوم
                 </h2>
                 {coach?.todaySchedules?.length === 0 ? (
-                    <div className="bg-slate-50 border border-slate-200 border-dashed rounded-xl p-8 text-center text-slate-500">
-                        لا توجد جلسات مجدولة اليوم.
+                    <div className="bg-slate-50 border-2 border-slate-200 border-dashed rounded-2xl p-12 text-center">
+                        <p className="text-slate-400 font-bold">لا توجد جلسات مجدولة لهذا اليوم.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         {coach?.todaySchedules?.map((s: any) => (
-                            <div key={s.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex justify-between items-center">
+                            <div key={s.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex justify-between items-center hover:border-[#E60000]/30 transition-all overflow-hidden group">
                                 <div>
-                                    <p className="font-bold text-slate-900">{s.group?.name}</p>
-                                    <p className="text-sm text-slate-500 mt-1">{s.branch?.name} • {s.start_time} - {s.end_time}</p>
-                                    <p className="text-xs text-slate-400 mt-0.5">ملعب: {s.field_name || 'الرئيسي'}</p>
+                                    <p className="font-black text-lg text-slate-900 group-hover:text-[#E60000] transition-colors">{s.group?.name}</p>
+                                    <p className="text-sm text-slate-500 mt-1 font-bold">{s.branch?.name} • {s.start_time} - {s.end_time}</p>
+                                    <p className="text-xs text-slate-400 mt-1">ملعب: {s.field_name || 'الرئيسي'}</p>
                                 </div>
                                 <Link
                                     href={`/coach/attendance/${s.group_id}?schedule=${s.id}${coachId ? `&coachId=${coachId}` : ""}`}
-                                    className="bg-[#E60000] text-white text-sm font-bold px-4 py-2 rounded-lg flex items-center gap-1.5 hover:bg-red-700 transition"
+                                    className="bg-[#E60000] text-white text-sm font-black px-5 py-3 rounded-xl flex items-center gap-2 hover:bg-red-700 transition shadow-md active:scale-95"
                                 >
                                     حضور <ChevronLeft className="w-4 h-4" />
                                 </Link>
@@ -77,22 +85,22 @@ export default function CoachDashboardPage() {
 
             {/* My Groups */}
             <section>
-                <h2 className="text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
-                    <Users className="w-4 h-4 text-[#E60000]" /> مجموعاتي
+                <h2 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
+                    <Users className="w-5 h-5 text-[#E60000]" /> مجموعاتي
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     {coach?.groups?.length === 0 ? (
-                        <p className="text-slate-500 text-sm">لم يتم تعيينك لأي مجموعة حتى الآن.</p>
+                        <p className="text-slate-400 font-bold py-4">لم يتم تعيينك لأي مجموعة حتى الآن.</p>
                     ) : (
                         coach?.groups?.map((g: any) => (
-                            <div key={g.id} className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                                <p className="font-bold text-slate-900">{g.name}</p>
-                                <p className="text-sm text-slate-500 mt-1">{g.players?.length || 0} لاعب</p>
+                            <div key={g.id} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow">
+                                <p className="font-black text-slate-900">{g.name}</p>
+                                <p className="text-sm text-slate-500 mt-1 font-semibold">{g.players?.length || 0} لاعب</p>
                                 <Link
                                     href={`/coach/attendance/${g.id}${coachId ? `?coachId=${coachId}` : ""}`}
-                                    className="mt-4 flex items-center gap-1 text-sm font-bold text-[#E60000] hover:underline"
+                                    className="mt-5 flex items-center gap-1 text-sm font-black text-[#E60000] hover:translate-x-[-4px] transition-transform"
                                 >
-                                    تسجيل الحضور <ChevronLeft className="w-3.5 h-3.5" />
+                                    تسجيل الحضور <ChevronLeft className="w-4 h-4" />
                                 </Link>
                             </div>
                         ))
@@ -100,5 +108,17 @@ export default function CoachDashboardPage() {
                 </div>
             </section>
         </div>
+    );
+}
+
+export default function CoachDashboardPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center p-20">
+                <Loader2 className="w-8 h-8 animate-spin text-slate-300" />
+            </div>
+        }>
+            <DashboardContent />
+        </Suspense>
     );
 }

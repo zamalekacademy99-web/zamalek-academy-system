@@ -1,7 +1,8 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Star, ShieldAlert } from "lucide-react";
+import { useCoachId } from "@/hooks/useCoachId";
+import { Star, ShieldAlert, Loader2, Check } from "lucide-react";
 import { fetchApi } from "@/lib/api";
 
 const CRITERIA = [
@@ -14,7 +15,7 @@ const CRITERIA = [
 function StarRating({ value, onChange }: { value: number; onChange: (v: number) => void }) {
     const [hover, setHover] = useState(0);
     return (
-        <div className="flex gap-1">
+        <div className="flex gap-1.5 justify-center">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
                 <button
                     key={i}
@@ -22,21 +23,20 @@ function StarRating({ value, onChange }: { value: number; onChange: (v: number) 
                     onMouseEnter={() => setHover(i)}
                     onMouseLeave={() => setHover(0)}
                     onClick={() => onChange(i)}
-                    className={`transition-colors ${(hover || value) >= i ? 'text-yellow-400' : 'text-slate-200'}`}
+                    className={`transition-all active:scale-95 ${(hover || value) >= i ? 'text-yellow-400 scale-110' : 'text-slate-200'}`}
                 >
-                    <Star className="w-6 h-6 fill-current" />
+                    <Star className="w-8 h-8 fill-current" />
                 </button>
             ))}
         </div>
     );
 }
 
-export default function EvaluatePage() {
+function EvaluateContent() {
     const params = useParams();
-    const searchParams = useSearchParams();
     const router = useRouter();
+    const coachId = useCoachId();
     const studentId = params?.studentId as string;
-    const coachId = searchParams.get("coachId");
 
     const [player, setPlayer] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -69,7 +69,7 @@ export default function EvaluatePage() {
                 method: 'POST',
                 body: JSON.stringify({
                     player_id: studentId,
-                    coach_id: coachId, // Added for admin impersonation
+                    coach_id: coachId,
                     date: new Date().toISOString().split('T')[0],
                     ...scores,
                     notes
@@ -84,45 +84,64 @@ export default function EvaluatePage() {
         }
     };
 
-    if (loading) return <div className="p-8 text-center text-slate-500">جاري تحميل بيانات اللاعب...</div>;
-    if (!player) return <div className="p-8 text-center text-red-500">لم يتم العثور على اللاعب.</div>;
+    if (loading) return (
+        <div className="flex flex-col items-center justify-center p-20 space-y-4">
+            <Loader2 className="w-10 h-10 animate-spin text-[#E60000]" />
+            <p className="text-slate-500 font-bold">جاري تحميل بيانات اللاعب...</p>
+        </div>
+    );
+
+    if (!player) return (
+        <div className="p-12 text-center text-red-600 font-bold bg-red-50 rounded-2xl border-2 border-red-100">
+            ⚠️ تعذر العثور على اللاعب.
+        </div>
+    );
 
     const avgScore = Math.round(Object.values(scores).reduce((a: any, b: any) => a + b, 0) / 4);
 
     return (
         <div className="max-w-2xl mx-auto space-y-6">
             {/* Player Header Card */}
-            <div className="bg-gradient-to-br from-[#E60000] to-red-700 text-white rounded-2xl p-6 flex items-center gap-4 shadow-lg">
-                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center text-3xl font-black">
+            <div className="bg-gradient-to-br from-[#E60000] to-red-800 text-white rounded-3xl p-8 flex items-center gap-6 shadow-xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-3xl" />
+                <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center text-4xl font-black shadow-inner">
                     {player.first_name?.[0]}
                 </div>
-                <div>
-                    <h1 className="text-2xl font-black">{player.first_name} {player.last_name}</h1>
-                    <p className="text-red-100 text-sm mt-0.5">{player.group?.name} • {player.branch?.name}</p>
+                <div className="flex-1">
+                    <h1 className="text-3xl font-black tracking-tight">{player.first_name} {player.last_name}</h1>
+                    <p className="text-red-100 text-sm mt-1 font-bold opacity-80">{player.group?.name} • {player.branch?.name}</p>
                 </div>
-                <div className="ms-auto text-center">
+                <div className="text-center bg-white/10 rounded-2xl p-4 min-w-[80px]">
                     <div className="text-4xl font-black">{avgScore}</div>
-                    <div className="text-xs text-red-200 font-semibold">/10 متوسط</div>
+                    <div className="text-[10px] text-red-100 font-black uppercase tracking-wider">متوسط</div>
                 </div>
             </div>
 
             {coachId && (
-                <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-bold shadow-sm">
-                    <ShieldAlert className="w-5 h-5 text-amber-600" />
+                <div className="bg-amber-50 border-2 border-amber-200 text-amber-900 px-5 py-4 rounded-2xl flex items-center gap-4 text-sm font-black shadow-md">
+                    <ShieldAlert className="w-6 h-6 text-amber-600 flex-shrink-0" />
                     تحذير: أنت تقوم بالتقييم نيابة عن المدرب (وضع الإدارة).
                 </div>
             )}
 
-            {error && <div className="bg-red-50 text-red-600 p-4 rounded-lg border border-red-200">{error}</div>}
-            {success && <div className="bg-green-50 text-green-700 p-4 rounded-lg border border-green-200 font-bold">✅ تم إرسال التقييم بنجاح!</div>}
+            {error && (
+                <div className="bg-red-50 text-red-700 p-5 rounded-2xl border-2 border-red-100 font-bold animate-shake">
+                    ⚠️ {error}
+                </div>
+            )}
 
-            <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 shadow-sm divide-y divide-gray-100">
-                {/* Score Criteria */}
+            {success && (
+                <div className="bg-green-600 text-white p-5 rounded-2xl shadow-lg shadow-green-600/20 font-black animate-bounce-in flex items-center justify-center gap-2">
+                    ✅ تم إرسال التقييم بنجاح! جاري العودة...
+                </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden divide-y divide-slate-100">
                 {CRITERIA.map(c => (
-                    <div key={c.key} className="p-5">
-                        <div className="flex items-center justify-between mb-3">
-                            <label className="font-semibold text-slate-800 text-sm">{c.label}</label>
-                            <span className="text-lg font-black text-[#E60000]">{(scores as any)[c.key]}/10</span>
+                    <div key={c.key} className="p-6 space-y-4 hover:bg-slate-50/50 transition-colors">
+                        <div className="flex items-center justify-between">
+                            <label className="font-black text-slate-800 text-base">{c.label}</label>
+                            <span className="text-xl font-black text-[#E60000] bg-[#E60000]/5 px-3 py-1 rounded-lg">{(scores as any)[c.key]}/10</span>
                         </div>
                         <StarRating
                             value={(scores as any)[c.key]}
@@ -131,28 +150,39 @@ export default function EvaluatePage() {
                     </div>
                 ))}
 
-                {/* Notes */}
-                <div className="p-5">
-                    <label className="block font-semibold text-slate-800 text-sm mb-2">ملاحظات المدرب (اختياري)</label>
+                <div className="p-6">
+                    <label className="block font-black text-slate-800 text-base mb-3">ملاحظات المدرب (اختياري)</label>
                     <textarea
                         rows={4}
                         value={notes}
                         onChange={e => setNotes(e.target.value)}
-                        placeholder="اكتب ملاحظاتك عن أداء اللاعب اليوم..."
-                        className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#E60000] outline-none resize-none"
+                        placeholder="اكتب ملاحظاتك عن أداء اللاعب اليوم ليركبها ولي الأمر..."
+                        className="w-full border-2 border-slate-100 bg-slate-50 rounded-2xl p-4 text-sm font-semibold focus:ring-2 focus:ring-[#E60000] focus:bg-white focus:border-[#E60000] outline-none transition-all resize-none"
                     />
                 </div>
 
-                <div className="p-5 flex justify-end">
+                <div className="p-6 bg-slate-50 flex justify-end">
                     <button
                         type="submit"
                         disabled={saving}
-                        className="bg-[#E60000] text-white px-8 py-3 rounded-xl font-bold text-sm hover:bg-red-700 transition disabled:opacity-60"
+                        className="bg-[#E60000] text-white px-12 py-4 rounded-2xl font-black text-lg hover:bg-red-700 transition shadow-xl hover:shadow-red-500/20 active:scale-95 disabled:opacity-50"
                     >
-                        {saving ? 'جاري الإرسال...' : 'إرسال التقييم'}
+                        {saving ? 'جاري الإرسال...' : 'حفظ وإرسال التقييم 🔥'}
                     </button>
                 </div>
             </form>
         </div>
+    );
+}
+
+export default function EvaluatePage() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center p-20">
+                <Loader2 className="w-8 h-8 animate-spin text-slate-300" />
+            </div>
+        }>
+            <EvaluateContent />
+        </Suspense>
     );
 }
