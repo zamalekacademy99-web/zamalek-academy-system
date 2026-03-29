@@ -45,10 +45,10 @@ export const createSchedule = async (req: Request, res: Response): Promise<void>
         console.log(`[Schedule v1.6.2] Bulk creating for groups: ${group_ids.join(', ')}`);
 
         const createdSchedules = await prisma.$transaction(async (tx) => {
-            const results = [];
+            const results: any[] = [];
             for (const gid of group_ids) {
                 // 1. Find the group and its linked coaches
-                const group = await tx.group.findUnique({
+                const group = await (tx.group as any).findUnique({
                     where: { id: String(gid) },
                     include: { coaches: true }
                 });
@@ -56,7 +56,7 @@ export const createSchedule = async (req: Request, res: Response): Promise<void>
                 if (!group) continue;
 
                 // 2. Auto-assign the first coach
-                const coach_id = group.coaches[0]?.id;
+                const coach_id = group.coaches?.[0]?.id;
                 if (!coach_id) {
                     console.warn(`[Schedule v1.6.2] Group ${group.name} (${gid}) has no linked coaches. Skipping.`);
                     continue;

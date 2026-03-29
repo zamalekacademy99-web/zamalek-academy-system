@@ -10,6 +10,7 @@ type Schedule = {
     id: string;
     branch: Branch;
     group: Group;
+    group_id: string;
     coach: Coach;
     day_of_week: number;
     start_time: string;
@@ -221,8 +222,8 @@ export default function SchedulesPage() {
                                             type="button"
                                             onClick={() => toggleGroup(g.id)}
                                             className={`p-5 rounded-2xl border-2 text-right transition-all flex items-center justify-between group h-20 ${formData.group_ids.includes(g.id)
-                                                    ? "border-[#E60000] bg-red-50 text-[#E60000] shadow-md shadow-red-100"
-                                                    : "border-slate-50 bg-white text-slate-600 hover:border-slate-200"
+                                                ? "border-[#E60000] bg-red-50 text-[#E60000] shadow-md shadow-red-100"
+                                                : "border-slate-50 bg-white text-slate-600 hover:border-slate-200"
                                                 }`}
                                         >
                                             <span className={`font-black tracking-tight ${formData.group_ids.includes(g.id) ? "scale-105" : ""} transition-transform`}>{g.name}</span>
