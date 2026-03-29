@@ -17,7 +17,7 @@ export default function Sidebar() {
         { name: "الحضور", href: "/admin/attendance", icon: CalendarDays },
         { name: "الجداول", href: "/admin/schedules", icon: CalendarDays },
         { name: "المدفوعات", href: "/admin/payments", icon: Wallet },
-        { name: "الإشعارات", href: "/admin/notifications", icon: Settings },
+        { name: "مركز الإشعارات", href: "/admin/notifications", icon: Settings },
     ];
 
     const handleLogout = () => {

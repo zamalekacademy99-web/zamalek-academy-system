@@ -1,4 +1,4 @@
-// Force Re-deployment: v1.0.1 (Phase 9 Finalized)
+// Build Version: 1.0.9 - Notification Update
 import type { Metadata } from "next";
 import { Cairo, Tajawal, Geist } from "next/font/google";
 import "./globals.css";
@@ -19,8 +19,8 @@ const cairo = Cairo({
 });
 
 export const metadata: Metadata = {
-  title: "Zamalek Academy - Gharbia (v1.0.3)",
-  description: "Management System for Zamalek Football Academy Branches in Gharbia. v1.0.3",
+  title: "Zamalek Academy - Gharbia (v1.0.9)",
+  description: "Management System for Zamalek Football Academy Branches in Gharbia. v1.0.9",
 };
 
 export default function RootLayout({

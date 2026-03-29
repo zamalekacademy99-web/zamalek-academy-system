@@ -177,11 +177,30 @@ export const submitRequest = async (req: Request, res: Response): Promise<void> 
                 player_id: child_id || null,
                 type: type as RequestType,
                 message
-            }
+            },
+            include: { parent: { include: { user: true } } }
         });
+
+        // Create notification for admins
+        const admins = await prisma.user.findMany({
+            where: { role: { in: ['ADMIN', 'SUPER_ADMIN'] } },
+            select: { id: true }
+        });
+
+        if (admins.length > 0) {
+            await prisma.notification.createMany({
+                data: admins.map(admin => ({
+                    user_id: admin.id,
+                    title: `طلب جديد: ${type}`,
+                    message: `قام ${newReq.parent.user.name} بإرسال طلب جديد`,
+                    type: 'SYSTEM'
+                }))
+            });
+        }
 
         res.status(201).json({ status: 'success', data: newReq });
     } catch (error) {
+        console.error('Error submitting request:', error);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };

@@ -101,3 +101,16 @@ export const getSentHistory = async (req: Request, res: Response): Promise<void>
         res.status(500).json({ status: 'error', message: error.message || 'Internal server error' });
     }
 };
+
+export const markNotificationRead = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        await prisma.notification.update({
+            where: { id: id as string },
+            data: { is_read: true }
+        });
+        res.status(200).json({ status: 'success' });
+    } catch (error: any) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
+};

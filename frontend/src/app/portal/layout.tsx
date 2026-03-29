@@ -1,8 +1,10 @@
 "use client";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, Users, Bell, MessageSquareText, LogOut } from "lucide-react";
 import AuthGuard from "@/components/auth/AuthGuard";
+import { fetchApi } from "@/lib/api";
 
 export default function PortalLayout({
     children,
@@ -11,6 +13,21 @@ export default function PortalLayout({
 }) {
     const pathname = usePathname();
     const router = useRouter();
+    const [unreadNotifs, setUnreadNotifs] = useState(0);
+
+    const loadNotifs = async () => {
+        try {
+            const res = await fetchApi('/parent/dashboard');
+            setUnreadNotifs(res.data.unread_notifications || 0);
+        } catch (e) { }
+    };
+
+    useEffect(() => {
+        loadNotifs();
+        // Refresh every 2 minutes
+        const timer = setInterval(loadNotifs, 120000);
+        return () => clearInterval(timer);
+    }, []);
 
     const navItems = [
         { name: "الرئيسية", href: "/portal", icon: Home },
@@ -57,14 +74,21 @@ export default function PortalLayout({
                     {navItems.map((item) => {
                         const Icon = item.icon;
                         const isActive = pathname === item.href;
+                        const isNotif = item.href === '/portal/notifications';
+
                         return (
                             <Link
                                 key={item.name}
                                 href={item.href}
-                                className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${isActive ? "text-[#E60000]" : "text-slate-500 hover:text-slate-800"
+                                className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors relative ${isActive ? "text-[#E60000]" : "text-slate-500 hover:text-slate-800"
                                     }`}
                             >
-                                <Icon className={`w-6 h-6 ${isActive ? "fill-red-50 text-[#E60000]" : ""}`} strokeWidth={isActive ? 2.5 : 2} />
+                                <div className="relative">
+                                    <Icon className={`w-6 h-6 ${isActive ? "fill-red-50 text-[#E60000]" : ""}`} strokeWidth={isActive ? 2.5 : 2} />
+                                    {isNotif && unreadNotifs > 0 && (
+                                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-600 border-2 border-white rounded-full"></span>
+                                    )}
+                                </div>
                                 <span className="text-[10px] font-medium">{item.name}</span>
                             </Link>
                         );

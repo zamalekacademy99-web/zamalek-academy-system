@@ -1,4 +1,4 @@
-// Force Re-deployment: v1.0.1 (Phase 9 Finalized)
+// Build Version: 1.0.9 - Notification Update
 import 'dotenv/config';
 import express from 'express';
 import type { Request, Response } from 'express';
@@ -17,6 +17,7 @@ import analyticsRoutes from './routes/analytics.routes';
 import notificationRoutes from './routes/notification.routes';
 import coachPortalRoutes from './routes/coach-portal.routes';
 import messageRoutes from './routes/message.routes';
+import adminNotificationsRoutes from './routes/admin-notifications.routes';
 import { startAutomationService } from './services/automation.service';
 
 const app = express();
@@ -65,6 +66,7 @@ app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/coach', coachPortalRoutes);
 app.use('/api/v1/messages', messageRoutes);
+app.use('/api/v1/admin/notifications', adminNotificationsRoutes);
 
 // ----------------------------------------------------------------
 // System Routes
@@ -75,7 +77,7 @@ app.get('/api/v1/health', (_req: Request, res: Response) => {
         message: 'Zamalek Academy API is running',
         port: String(port),
         env: process.env.NODE_ENV || 'development',
-        version: '1.0.3',
+        version: '1.0.9',
         timestamp: new Date().toISOString()
     });
 });
