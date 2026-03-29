@@ -101,8 +101,10 @@ export const registerPlayer = async (req: Request, res: Response): Promise<void>
 
 export const getAllPlayers = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { branch_id } = req.query;
-        const filter = branch_id ? { branch_id: String(branch_id) } : {};
+        const { branch_id, coach_id } = req.query;
+        const filter: any = {};
+        if (branch_id) filter.branch_id = String(branch_id);
+        if (coach_id) filter.coach_id = String(coach_id);
 
         const players = await prisma.player.findMany({
             where: filter,

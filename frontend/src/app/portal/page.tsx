@@ -11,6 +11,7 @@ type Child = {
     coach: { full_name: string };
     status: string;
     payments: any[];
+    parent: { balance: number };
     group: { name: string; schedules: any[] };
 };
 
@@ -188,10 +189,15 @@ export default function PortalDashboard() {
                                             <div className={`p-2 rounded-lg ${isPaid ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>
                                                 <Wallet className="w-5 h-5" />
                                             </div>
-                                            <p className="font-semibold text-slate-800 text-sm">حالة اشتراك {child.first_name}</p>
+                                            <div>
+                                                <p className="font-semibold text-slate-800 text-sm">حالة اشتراك {child.first_name}</p>
+                                                {child.parent?.balance > 0 && (
+                                                    <p className="text-[10px] font-black text-green-600">اشتراك داخل (Credit): {child.parent.balance} ج.م</p>
+                                                )}
+                                            </div>
                                         </div>
                                         <span className={`px-2 py-1 text-xs font-bold rounded ${isPaid ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'}`}>
-                                            {isPaid ? 'نشط' : 'متأخر'}
+                                            {isPaid ? 'نشط (مشترك)' : 'PENDING'}
                                         </span>
                                     </div>
                                     <div className="flex justify-between items-end">
