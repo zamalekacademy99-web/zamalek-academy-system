@@ -36,7 +36,7 @@ function EvaluateContent() {
     const params = useParams();
     const router = useRouter();
     const coachId = useCoachId();
-    const studentId = params?.studentId as string;
+    const id = params?.id as string;
 
     const [player, setPlayer] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -53,14 +53,15 @@ function EvaluateContent() {
     const [notes, setNotes] = useState("");
 
     useEffect(() => {
-        if (!studentId) return;
+        if (!id) return;
         setLoading(true);
         setError(null);
-        fetchApi(`/coach/players/${studentId}`)
+        fetchApi(`/coach/players/${id}`)
             .then(res => setPlayer(res.data))
             .catch(err => setError(err.message))
             .finally(() => setLoading(false));
-    }, [studentId]);
+    }, [id]);
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -70,8 +71,9 @@ function EvaluateContent() {
             await fetchApi('/coach/evaluate', {
                 method: 'POST',
                 body: JSON.stringify({
-                    player_id: studentId,
+                    player_id: id,
                     coach_id: coachId,
+
                     date: new Date().toISOString().split('T')[0],
                     ...scores,
                     notes

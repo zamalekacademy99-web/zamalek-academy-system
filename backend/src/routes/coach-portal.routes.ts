@@ -14,7 +14,8 @@ const router = Router();
 
 // All coach-portal routes require authentication
 router.use(authenticate);
-router.use(authorize(['COACH', 'SUPER_ADMIN', 'ADMIN'] as Role[]));
+router.use(authorize(['COACH', 'SUPER_ADMIN', 'ADMIN'] as any[]));
+
 
 
 
