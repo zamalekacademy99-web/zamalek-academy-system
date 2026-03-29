@@ -56,6 +56,7 @@ export default function AddPaymentModal({ isOpen, onClose, onSuccess }: Props) {
             setSelectedBranch("");
             setSelectedGroup("");
             setPlayers([]);
+            setGroups([]);
             setFormData(prev => ({ ...prev, player_id: "", amount: "" }));
         }
     }, [isOpen]);
@@ -65,27 +66,18 @@ export default function AddPaymentModal({ isOpen, onClose, onSuccess }: Props) {
         try {
             // 1. Determine Role
             let currentRole: "ADMIN" | "COACH" = "ADMIN";
-            let coachId = null;
 
-            try {
-                const profileRes = await fetchApi('/coaches/profile');
-                if (profileRes.data && profileRes.data.id) {
-                    currentRole = "COACH";
-                    coachId = profileRes.data.id;
-                }
-            } catch (err) {
-                currentRole = "ADMIN";
-            }
-            setRole(currentRole);
-
-            // 2. Fetch Branches (Always needed for Admin)
-            if (currentRole === "ADMIN") {
+            const profileRes = await fetchApi('/coaches/profile').catch(() => null);
+            if (profileRes && profileRes.data && profileRes.data.id) {
+                currentRole = "COACH";
+                setRole("COACH");
+                // For coach, fetch their groups immediately
+                setGroups(profileRes.data.groups || []);
+                console.log("[Modal] Role: COACH. Groups loaded:", profileRes.data.groups?.length);
+            } else {
+                setRole("ADMIN");
                 const branchRes = await fetchApi('/branches');
                 setBranches(branchRes.data || []);
-            } else if (currentRole === "COACH" && coachId) {
-                // For coach, fetch players directly using the improved backend
-                const playerRes = await fetchApi(`/players?coach_id=${coachId}`);
-                setPlayers(playerRes.data || []);
             }
         } catch (error) {
             console.error("[Modal] Init error:", error);
@@ -94,7 +86,7 @@ export default function AddPaymentModal({ isOpen, onClose, onSuccess }: Props) {
         }
     };
 
-    // Cascade 1: Branch -> Groups
+    // Admin Flow: Branch -> Groups
     const handleBranchChange = async (branchId: string) => {
         setSelectedBranch(branchId);
         setSelectedGroup("");
@@ -114,7 +106,7 @@ export default function AddPaymentModal({ isOpen, onClose, onSuccess }: Props) {
         }
     };
 
-    // Cascade 2: Group -> Players
+    // Shared Flow: Group -> Players (Both Admin and Coach)
     const handleGroupChange = async (groupId: string) => {
         setSelectedGroup(groupId);
         setFormData(prev => ({ ...prev, player_id: "" }));
@@ -123,9 +115,9 @@ export default function AddPaymentModal({ isOpen, onClose, onSuccess }: Props) {
 
         setLoading(true);
         try {
-            // Fetch players for this specific group
             const res = await fetchApi(`/players?group_id=${groupId}`);
             setPlayers(res.data || []);
+            console.log(`[Modal] Players loaded for group ${groupId}:`, res.data?.length);
         } catch (err) {
             console.error("Failed to load players:", err);
         } finally {
@@ -179,120 +171,84 @@ export default function AddPaymentModal({ isOpen, onClose, onSuccess }: Props) {
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
+                <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[85vh] overflow-y-auto custom-scrollbar">
                     <div className="space-y-4">
 
-                        {/* ADMIN CASCADING FILTERS */}
-                        {role === "ADMIN" && (
-                            <>
-                                <div className="grid grid-cols-2 gap-4">
-                                    {/* Branch Select */}
-                                    <div>
-                                        <label className="block text-xs font-black text-slate-500 mb-2 mr-1 uppercase">الفرع</label>
-                                        <div className="relative">
-                                            <MapPin className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                            <select
-                                                value={selectedBranch}
-                                                onChange={(e) => handleBranchChange(e.target.value)}
-                                                className="w-full pr-12 pl-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] focus:bg-white transition-all appearance-none font-bold text-slate-800 text-sm"
-                                            >
-                                                <option value="">اختر الفرع...</option>
-                                                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    {/* Group Select */}
-                                    <div>
-                                        <label className="block text-xs font-black text-slate-500 mb-2 mr-1 uppercase">المجموعة</label>
-                                        <div className="relative">
-                                            <Layers className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                            <select
-                                                disabled={!selectedBranch}
-                                                value={selectedGroup}
-                                                onChange={(e) => handleGroupChange(e.target.value)}
-                                                className="w-full pr-12 pl-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] focus:bg-white transition-all appearance-none font-bold text-slate-800 text-sm disabled:opacity-50"
-                                            >
-                                                <option value="">{selectedBranch ? "اختر المجموعة..." : "اختر الفرع أولاً"}</option>
-                                                {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                                            </select>
-                                        </div>
+                        {/* SELECTORS (ADMIN gets Branch+Group, COACH gets Group) */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {role === "ADMIN" && (
+                                <div>
+                                    <label className="block text-xs font-black text-slate-500 mb-2 mr-1 uppercase tracking-wider">الفرع</label>
+                                    <div className="relative">
+                                        <MapPin className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                        <select
+                                            value={selectedBranch}
+                                            onChange={(e) => handleBranchChange(e.target.value)}
+                                            className="w-full pr-12 pl-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] focus:bg-white transition-all appearance-none font-bold text-slate-800"
+                                        >
+                                            <option value="">اختر الفرع...</option>
+                                            {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                        </select>
                                     </div>
                                 </div>
-                            </>
-                        )}
+                            )}
+
+                            <div className={role === "COACH" ? "col-span-2" : ""}>
+                                <label className="block text-xs font-black text-slate-500 mb-2 mr-1 uppercase tracking-wider">المجموعة</label>
+                                <div className="relative">
+                                    <Layers className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                    <select
+                                        disabled={loading || (role === "ADMIN" && !selectedBranch)}
+                                        value={selectedGroup}
+                                        onChange={(e) => handleGroupChange(e.target.value)}
+                                        className="w-full pr-12 pl-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] focus:bg-white transition-all appearance-none font-bold text-slate-800 disabled:opacity-50"
+                                    >
+                                        <option value="">{loading ? "جاري التحميل..." : (role === "COACH" ? "اختر المجموعة للبحث عن اللاعبين..." : "اختر المجموعة...")}</option>
+                                        {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
 
                         {/* Player Selection */}
                         <div>
-                            <label className="block text-xs font-black text-slate-500 mb-2 mr-1 tracking-wider uppercase">اختيار اللاعب</label>
+                            <label className="block text-xs font-black text-slate-500 mb-2 mr-1 tracking-wider uppercase underline decoration-[#E60000] decoration-2 underline-offset-4">اختيار اللاعب</label>
                             <div className="relative">
-                                <User className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                <User className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#E60000]" />
                                 <select
                                     required
                                     value={formData.player_id}
                                     onChange={(e) => setFormData(prev => ({ ...prev, player_id: e.target.value }))}
-                                    className="w-full pr-12 pl-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] focus:bg-white transition-all appearance-none font-bold text-slate-800"
-                                    disabled={loading || (role === "ADMIN" && !selectedGroup)}
+                                    className="w-full pr-12 pl-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] focus:bg-white transition-all appearance-none font-black text-slate-900 border-l-[#E60000]"
+                                    disabled={loading || !selectedGroup}
                                 >
-                                    <option value="">
-                                        {loading ? "جاري التحميل..." :
-                                            (role === "ADMIN" && !selectedGroup ? "اختر المجموعة لعرض اللاعبين" : "اختر اللاعب من القائمة...")}
-                                    </option>
+                                    <option value="">{!selectedGroup ? "يرجى اختيار المجموعة أولاً" : "اختر اللاعب من القائمة..."}</option>
                                     {players.map(pl => (
                                         <option key={pl.id} value={pl.id}>{pl.first_name} {pl.last_name}</option>
                                     ))}
-                                    {!loading && players.length === 0 && (selectedGroup || role === "COACH") && (
-                                        <option value="" disabled className="text-red-500">❌ لا يوجد لاعبين متاحين</option>
+                                    {!loading && selectedGroup && players.length === 0 && (
+                                        <option value="" disabled className="text-red-500 font-black">❌ لا يوجد لاعبين متاحين في هذه المجموعة</option>
                                     )}
                                 </select>
                             </div>
                         </div>
 
-                        {/* Category Selection */}
-                        <div>
-                            <label className="block text-xs font-black text-slate-500 mb-2 mr-1 tracking-wider uppercase">نوع الدفعة</label>
-                            <div className="relative">
-                                <Tag className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <div className="h-px bg-slate-100 my-2" />
+
+                        {/* Category & Amount */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-black text-slate-500 mb-2 mr-1 uppercase">نوع الدفعة</label>
                                 <select
                                     value={formData.category}
                                     onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                                    className="w-full pr-12 pl-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] focus:bg-white transition-all appearance-none font-bold text-slate-800"
+                                    className="w-full px-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] font-bold text-slate-800"
                                 >
-                                    {CATEGORIES.map(cat => (
-                                        <option key={cat.id} value={cat.id}>{cat.label}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-
-                        {/* Month & Year Selection */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-xs font-black text-slate-500 mb-2 mr-1 tracking-wider uppercase">شهـر</label>
-                                <select
-                                    value={formData.month}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, month: e.target.value }))}
-                                    className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl focus:border-[#E60000] appearance-none font-bold text-slate-800"
-                                >
-                                    {ARABIC_MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                                    {CATEGORIES.map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-xs font-black text-slate-500 mb-2 mr-1 tracking-wider uppercase">السـنة</label>
-                                <select
-                                    value={formData.year}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, year: e.target.value }))}
-                                    className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl focus:border-[#E60000] appearance-none font-bold text-slate-800"
-                                >
-                                    <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>
-                                    <option value={new Date().getFullYear() + 1}>{new Date().getFullYear() + 1}</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-xs font-black text-slate-500 mb-2 mr-1 tracking-wider uppercase">المبلغ (ج.م)</label>
+                                <label className="block text-xs font-black text-slate-500 mb-2 mr-1 uppercase">المبلغ (ج.م)</label>
                                 <div className="relative">
                                     <DollarSign className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
                                     <input
@@ -301,25 +257,39 @@ export default function AddPaymentModal({ isOpen, onClose, onSuccess }: Props) {
                                         placeholder="0.00"
                                         value={formData.amount}
                                         onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
-                                        className="w-full pr-12 pl-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] focus:bg-white transition-all font-black text-lg text-slate-800"
+                                        className="w-full pr-12 pl-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] focus:bg-white transition-all font-black text-lg text-slate-800 shadow-inner"
                                     />
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Month & Year Selection */}
+                        <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-xs font-black text-slate-500 mb-2 mr-1 tracking-wider uppercase">طريقة الدفع</label>
+                                <label className="block text-xs font-black text-slate-500 mb-2 mr-1 uppercase">شهـر</label>
                                 <select
-                                    value={formData.method}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, method: e.target.value }))}
-                                    className="w-full px-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] font-bold text-slate-800"
+                                    value={formData.month}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, month: e.target.value }))}
+                                    className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl focus:border-[#E60000] font-bold text-slate-800"
                                 >
-                                    <option value="CASH">نقدي</option>
-                                    <option value="BANK_TRANSFER">تحويل بنكي</option>
+                                    {ARABIC_MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-black text-slate-500 mb-2 mr-1 uppercase">السـنة</label>
+                                <select
+                                    value={formData.year}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, year: e.target.value }))}
+                                    className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl focus:border-[#E60000] font-bold text-slate-800"
+                                >
+                                    <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>
+                                    <option value={new Date().getFullYear() + 1}>{new Date().getFullYear() + 1}</option>
                                 </select>
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-xs font-black text-slate-500 mb-2 mr-1 tracking-wider uppercase">ملاحظات إضافية</label>
+                            <label className="block text-xs font-black text-slate-500 mb-2 mr-1 uppercase">ملاحظات</label>
                             <textarea
                                 rows={2}
                                 value={formData.notes}
@@ -337,7 +307,7 @@ export default function AddPaymentModal({ isOpen, onClose, onSuccess }: Props) {
                     >
                         {submitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <><CheckCircle2 className="w-6 h-6" /> حفظ المعاملة</>}
                     </button>
-                </form>form
+                </form>
             </div>
         </div>
     );

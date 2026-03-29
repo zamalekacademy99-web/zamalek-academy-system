@@ -110,10 +110,19 @@ export const getAllPlayers = async (req: Request, res: Response): Promise<void> 
                 include: { groups: true }
             });
             const groupIds = coach?.groups.map(g => g.id) || [];
-            filter.OR = [
-                { coach_id: String(coach_id) },
-                { group_id: { in: groupIds } }
-            ];
+
+            console.log(`[API] Fetching players for coach: ${coach_id} | Groups: ${groupIds.length} | Branch: ${coach?.branch_id}`);
+
+            if (groupIds.length > 0) {
+                filter.OR = [
+                    { coach_id: String(coach_id) },
+                    { group_id: { in: groupIds } }
+                ];
+            } else {
+                // Fallback for unassigned coaches: show all players in their branch
+                console.log(`[API] Coach ${coach_id} has no groups. Falling back to branch ${coach?.branch_id}`);
+                filter.branch_id = coach?.branch_id;
+            }
         }
 
         const players = await prisma.player.findMany({
