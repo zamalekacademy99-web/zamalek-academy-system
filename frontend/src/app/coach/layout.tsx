@@ -1,17 +1,20 @@
 "use client";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
-import { Home, ClipboardList, Star, LogOut } from "lucide-react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { Home, ClipboardList, Star, LogOut, ShieldAlert } from "lucide-react";
 
 export default function CoachLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const coachId = searchParams.get("coachId") || searchParams.get("adminViewCoachId");
 
     const navItems = [
         { name: "لوحتي", href: "/coach/dashboard", icon: Home },
         { name: "تسجيل الحضور", href: "/coach/attendance", icon: ClipboardList },
         { name: "تقييم اللاعبين", href: "/coach/evaluations/", icon: Star },
     ];
+
 
 
 
@@ -38,9 +41,10 @@ export default function CoachLayout({ children }: { children: React.ReactNode })
                         return (
                             <Link
                                 key={item.name}
-                                href={item.href}
+                                href={`${item.href}${coachId ? `?coachId=${coachId}` : ""}`}
                                 className={`flex items-center gap-3 px-4 py-3 rounded-md transition-colors font-medium text-sm ${active ? 'bg-red-50 text-[#E60000]' : 'text-slate-600 hover:bg-slate-50 hover:text-[#E60000]'}`}
                             >
+
                                 <Icon className="w-5 h-5 shrink-0" />
                                 <span>{item.name}</span>
                             </Link>
@@ -64,8 +68,15 @@ export default function CoachLayout({ children }: { children: React.ReactNode })
                     <h2 className="text-lg font-bold text-slate-800">بوابة المدرب</h2>
                 </header>
                 <main className="flex-1 overflow-y-auto p-6">
+                    {coachId && (
+                        <div className="mb-6 bg-amber-50 border-2 border-amber-200 text-amber-900 px-5 py-3 rounded-2xl flex items-center gap-4 text-xs font-black shadow-sm animate-pulse">
+                            <ShieldAlert className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                            <p>وضع الإدارة: أنت تشغل حالياً بوابة المدرب لهذا المعرف ({coachId}).</p>
+                        </div>
+                    )}
                     {children}
                 </main>
+
             </div>
         </div>
     );

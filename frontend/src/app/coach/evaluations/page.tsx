@@ -1,19 +1,20 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { fetchApi } from "@/lib/api";
 import { Loader2, User, ChevronRight, Star } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useCoachId } from "@/hooks/useCoachId";
 
-export default function EvaluationsListPage() {
+function EvaluationsListContent() {
     const [loading, setLoading] = useState(true);
     const [coachData, setCoachData] = useState<any>(null);
     const [error, setError] = useState("");
-    const searchParams = useSearchParams();
-    const coachId = searchParams.get("coachId"); // For admin impersonation
+    const coachId = useCoachId();
 
     useEffect(() => {
         const loadDashboard = async () => {
+            // Even if coachId is null initially, useAuth/useCoachId will eventually resolve it
+            // or the backend will fall back to the authenticated user's coach profile.
             try {
                 const url = coachId ? `/coach/dashboard?coachId=${coachId}` : "/coach/dashboard";
                 const res = await fetchApi(url);
@@ -104,3 +105,14 @@ export default function EvaluationsListPage() {
     );
 }
 
+export default function EvaluationsListPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center p-20">
+                <Loader2 className="w-8 h-8 animate-spin text-slate-300" />
+            </div>
+        }>
+            <EvaluationsListContent />
+        </Suspense>
+    );
+}
