@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAllCoaches, getCoachById, createCoach, updateCoach, deleteCoach, createCoachAccount, resetCoachPassword, normalizeCoachEmail } from '../controllers/coach.controller';
+import { getAllCoaches, getCoachById, createCoach, updateCoach, deleteCoach, createCoachAccount, resetCoachPassword, normalizeCoachEmail, getCoachProfile } from '../controllers/coach.controller';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 import type { Request, Response } from 'express';
 
@@ -12,6 +12,7 @@ router.get('/test-me', (_req: Request, res: Response) => {
 });
 
 router.get('/', authenticate, authorize(['ADMIN', 'SUPER_ADMIN']), getAllCoaches);
+router.get('/profile', authenticate, getCoachProfile); // Self profile for coaches
 router.get('/:id', authenticate, authorize(['ADMIN', 'SUPER_ADMIN']), getCoachById);
 router.post('/', authenticate, authorize(['SUPER_ADMIN']), createCoach);
 router.put('/:id', authenticate, authorize(['SUPER_ADMIN', 'ADMIN']), updateCoach);

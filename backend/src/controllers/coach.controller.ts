@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
-
 import prisma from '../db';
+import { Role } from '@prisma/client';
 
 export const getCoachById = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -11,7 +11,7 @@ export const getCoachById = async (req: Request, res: Response): Promise<void> =
             include: {
                 branch: true,
                 groups: { include: { _count: { select: { players: true } } } },
-                user: { select: { id: true, email: true, plain_password: true, password_hash: true, role: true, is_active: true, name: true } },
+                user: { select: { id: true, email: true, role: true, is_active: true, name: true } },
                 players: { select: { id: true, first_name: true, last_name: true, status: true } },
                 schedules: { include: { branch: true, group: true } }
             }
@@ -29,6 +29,32 @@ export const getCoachById = async (req: Request, res: Response): Promise<void> =
     }
 };
 
+export const getCoachProfile = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const user = (req as any).user;
+        if (!user || user.role !== 'COACH') {
+            res.status(403).json({ status: 'error', message: 'Forbidden. Not a coach.' });
+            return;
+        }
+
+        const coach = await prisma.coach.findUnique({
+            where: { user_id: user.id },
+            include: {
+                branch: true,
+                groups: { include: { _count: { select: { players: true } } } },
+            }
+        });
+
+        if (!coach) {
+            res.status(404).json({ status: 'error', message: 'Coach profile not found.' });
+            return;
+        }
+
+        res.status(200).json({ status: 'success', data: coach });
+    } catch (error: any) {
+        res.status(500).json({ status: 'error', message: error.message || 'Internal server error' });
+    }
+};
 
 export const getAllCoaches = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -36,7 +62,7 @@ export const getAllCoaches = async (req: Request, res: Response): Promise<void> 
         const filter = branch_id ? { branch_id: String(branch_id), is_active: true } : { is_active: true };
 
         const coaches = await prisma.coach.findMany({
-            where: filter,
+            where: filter as any,
             include: {
                 branch: true,
                 groups: { select: { id: true, name: true, branch_id: true } }
@@ -75,7 +101,6 @@ export const updateCoach = async (req: Request, res: Response): Promise<void> =>
         const { full_name, phone, branch_id, is_active, permissions } = req.body;
 
         const updateData: any = { full_name, phone, branch_id, is_active };
-        // Only update permissions if explicitly sent
         if (permissions !== undefined) {
             updateData.permissions = permissions;
         }
@@ -92,36 +117,29 @@ export const updateCoach = async (req: Request, res: Response): Promise<void> =>
     }
 };
 
-
 export const deleteCoach = async (req: Request, res: Response): Promise<void> => {
     try {
         const { id } = req.params;
-
-        // Soft delete
         const softDeletedCoach = await prisma.coach.update({
             where: { id: id as string },
             data: { is_active: false }
         });
-
         res.status(200).json({ status: 'success', message: 'Coach soft deleted successfully', data: softDeletedCoach });
     } catch (error) {
         console.error('Error deleting coach:', error);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
-/**
- * Standard slugifier to ensure emails are ASCII-only
- */
+
 const slugifyName = (name: string): string => {
     return String(name)
         .toLowerCase()
-        .replace(/\s+/g, '.') // spaces to dots
-        .replace(/[^\x00-\x7F]/g, "") // remove non-ascii (Arabic characters etc)
-        .replace(/[^a-z0-9.]/g, "") // remove special chars except dots
-        .replace(/\.+/g, ".") // collapses multiple dots
-        .replace(/^\.|\.$/g, ""); // strip leading/trailing dots
+        .replace(/\s+/g, '.')
+        .replace(/[^\x00-\x7F]/g, "")
+        .replace(/[^a-z0-9.]/g, "")
+        .replace(/\.+/g, ".")
+        .replace(/^\.|\.$/g, "");
 };
-
 
 export const resetCoachPassword = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -136,7 +154,7 @@ export const resetCoachPassword = async (req: Request, res: Response): Promise<v
             return;
         }
 
-        const password = coach.phone || "12345678"; // Reset to phone number
+        const password = coach.phone || "12345678";
         const passwordHash = await bcrypt.hash(password, 10);
 
         await prisma.user.update({
@@ -144,7 +162,7 @@ export const resetCoachPassword = async (req: Request, res: Response): Promise<v
             data: {
                 password_hash: passwordHash,
                 plain_password: password
-            }
+            } as any
         });
 
         res.status(200).json({ status: 'success', message: 'Password reset to phone number successfully!' });
@@ -201,11 +219,10 @@ export const createCoachAccount = async (req: Request, res: Response): Promise<v
             return;
         }
 
-        // Generate email: normalized_name.random@zamalek-academy.local
         const normalized = slugifyName(coach.full_name);
         const shortId = Math.random().toString(36).substring(2, 5);
         const email = `${normalized || 'coach'}.${shortId}@zamalek-academy.local`;
-        const password = coach.phone; // Use phone as plain_password
+        const password = coach.phone;
         const passwordHash = await bcrypt.hash(password, 10);
 
         const newUser = await prisma.user.create({
@@ -214,7 +231,7 @@ export const createCoachAccount = async (req: Request, res: Response): Promise<v
                 password_hash: passwordHash,
                 plain_password: password,
                 name: coach.full_name,
-                role: 'COACH',
+                role: 'COACH' as any,
             }
         });
 
@@ -230,4 +247,3 @@ export const createCoachAccount = async (req: Request, res: Response): Promise<v
         res.status(500).json({ status: 'error', message: error.message || 'Internal server error' });
     }
 };
-

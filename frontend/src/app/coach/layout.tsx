@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
-import { Home, ClipboardList, Star, LogOut, ShieldAlert } from "lucide-react";
+import { Home, ClipboardList, Star, LogOut, ShieldAlert, Bell } from "lucide-react";
+import { fetchApi } from "@/lib/api";
 
 // Inner component that uses hooks requiring Suspense
 function CoachLayoutInner({ children }: { children: React.ReactNode }) {
@@ -31,10 +32,33 @@ function CoachLayoutInner({ children }: { children: React.ReactNode }) {
         }
     }, [coachIdFromUrl]);
 
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [permissions, setPermissions] = useState<any>({});
+
+    const loadCoachContext = async () => {
+        try {
+            const res = await fetchApi('/coaches/profile');
+            if (res.data) {
+                setPermissions(res.data.permissions || {});
+            }
+            // Fetch unread notifications count (we can use a generic endpoint or dashboard)
+            const notifRes = await fetchApi('/parent/dashboard'); // Reusing for count or create new
+            setUnreadCount(notifRes.data.unread_notifications || 0);
+        } catch (e) { }
+    };
+
+    useEffect(() => {
+        loadCoachContext();
+        const timer = setInterval(loadCoachContext, 60000); // Poll every minute
+        return () => clearInterval(timer);
+    }, []);
+
     const navItems = [
         { name: "لوحتي", href: "/coach/dashboard", icon: Home },
         { name: "تسجيل الحضور", href: "/coach/attendance", icon: ClipboardList },
         { name: "تقييم اللاعبين", href: "/coach/evaluations", icon: Star },
+        ...(permissions.can_manage_payments ? [{ name: "المدفوعات", href: "/coach/payments", icon: ClipboardList }] : []),
+        { name: "الإشعارات", href: "/coach/notifications", icon: Bell },
     ];
 
     const handleLogout = () => {
@@ -59,19 +83,28 @@ function CoachLayoutInner({ children }: { children: React.ReactNode }) {
 
                 <nav className="flex-1 py-6 px-4 space-y-1">
                     {navItems.map((item) => {
-                        const Icon = item.icon;
+                        const Icon = (item as any).icon;
                         const active = pathname === item.href || pathname.startsWith(item.href + "/") || pathname.startsWith(item.href + "?");
-                        // Always append coachId to every sidebar link so it survives navigation
                         const href = coachId ? `${item.href}?coachId=${coachId}` : item.href;
+                        const isNotif = item.href === '/coach/notifications';
+
                         return (
                             <Link
                                 key={item.name}
                                 href={href}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-md transition-colors font-medium text-sm ${active ? "bg-red-50 text-[#E60000]" : "text-slate-600 hover:bg-slate-50 hover:text-[#E60000]"
+                                className={`flex items-center justify-between px-4 py-3 rounded-md transition-colors font-medium text-sm ${active ? "bg-red-50 text-[#E60000]" : "text-slate-600 hover:bg-slate-50 hover:text-[#E60000]"
                                     }`}
                             >
-                                <Icon className="w-5 h-5 shrink-0" />
-                                <span>{item.name}</span>
+                                <div className="flex items-center gap-3">
+                                    <Icon className="w-5 h-5 shrink-0" />
+                                    <span>{item.name}</span>
+                                </div>
+                                {isNotif && unreadCount > 0 && (
+                                    <div className="relative flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+                                    </div>
+                                )}
                             </Link>
                         );
                     })}

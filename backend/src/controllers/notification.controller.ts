@@ -1,7 +1,6 @@
-import { Request, Response } from 'express';
-
-import { Role } from '@prisma/client';
+import { Role, NotificationType } from '@prisma/client';
 import prisma from '../db';
+import { Request, Response } from 'express';
 
 
 export const sendNotification = async (req: Request, res: Response): Promise<void> => {
@@ -117,5 +116,24 @@ export const markNotificationRead = async (req: Request, res: Response): Promise
         res.status(200).json({ status: 'success' });
     } catch (error: any) {
         res.status(500).json({ status: 'error', message: error.message });
+    }
+};
+
+export const markAllNotificationsRead = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const user = (req as any).user;
+        if (!user) {
+            res.status(401).json({ status: 'error', message: 'Unauthorized' });
+            return;
+        }
+
+        await prisma.notification.updateMany({
+            where: { user_id: user.id, is_read: false },
+            data: { is_read: true }
+        });
+
+        res.status(200).json({ status: 'success', message: 'All notifications marked as read' });
+    } catch (error: any) {
+        res.status(500).json({ status: 'error', message: error.message || 'Internal server error' });
     }
 };

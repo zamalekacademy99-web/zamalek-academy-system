@@ -2,8 +2,8 @@
 import { useState, useEffect } from "react";
 import { fetchApi } from "@/lib/api";
 import {
-    Bell, MessageSquare, Clock, CheckCircle,
-    AlertTriangle, Info, Loader2, Sparkles, Zap
+    Bell, Clock, CheckCircle,
+    Info, Loader2, Sparkles, Zap
 } from "lucide-react";
 
 export default function PortalNotificationsPage() {
@@ -13,19 +13,8 @@ export default function PortalNotificationsPage() {
     const loadNotifications = async () => {
         setLoading(true);
         try {
-            // Fetch both system notifications and private messages
-            const [notifRes, msgRes] = await Promise.all([
-                fetchApi('/parent/dashboard'), // We can get count or list from dashboard
-                fetchApi('/parent/notifications'), // New endpoint or similar
-            ]);
-
-            // For now, let's assume /parent/notifications returns the merged list
-            // If not, we merge manually
-            setNotifications(notifRes.data.notifications || notifRes.data.children[0]?.notifications || []);
-
-            // Actually, let's fetch the real list if available
-            const realList = await fetchApi('/parent/notifications');
-            setNotifications(realList.data || []);
+            const res = await fetchApi('/parent/notifications');
+            setNotifications(res.data || []);
         } catch (err) {
             console.error('Failed to load notifications:', err);
         } finally {
@@ -37,15 +26,19 @@ export default function PortalNotificationsPage() {
         loadNotifications();
     }, []);
 
-    const markAsRead = async (id: string, type: string) => {
+    const markAsRead = async (id: string) => {
         try {
-            if (type === 'MESSAGE') {
-                await fetchApi(`/messages/${id}/read`, { method: 'PATCH' });
-            } else {
-                await fetchApi(`/notifications/${id}/read`, { method: 'PATCH' });
-            }
+            await fetchApi(`/notifications/${id}/read`, { method: 'PATCH' });
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
         } catch (err) { }
+    };
+
+    const markAllRead = async () => {
+        try {
+            await fetchApi('/notifications/read-all', { method: 'PATCH' });
+            setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+            // Refresh counts in layout if necessary (handled by layout's own interval)
+        } catch (e) { }
     };
 
     if (loading) {
@@ -64,12 +57,21 @@ export default function PortalNotificationsPage() {
                     <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2">
                         <Bell className="w-7 h-7 text-[#E60000]" /> مركز التنبيهات
                     </h2>
-                    <p className="text-sm text-slate-500 mt-1 font-medium">تابع أهم التحديثات والرسائل من إدارة الأكاديمية</p>
+                    <p className="text-sm text-slate-500 mt-1 font-medium">تابع أهم التحديثات من إدارة الأكاديمية</p>
                 </div>
                 <button onClick={loadNotifications} className="p-2 bg-white rounded-xl border border-slate-200">
                     <Sparkles className="w-5 h-5 text-orange-400" />
                 </button>
             </div>
+
+            {notifications.length > 0 && (
+                <button
+                    onClick={markAllRead}
+                    className="w-full py-3 bg-slate-900 text-white rounded-2xl text-xs font-black shadow-lg hover:bg-black transition-all"
+                >
+                    تعميم القراءة (Mark all as read)
+                </button>
+            )}
 
             {notifications.length > 0 ? (
                 <div className="space-y-4">
@@ -86,12 +88,6 @@ export default function PortalNotificationsPage() {
                                                 'bg-white border-white shadow-sm'
                                     }`}
                             >
-                                {isUrgent && !notif.is_read && (
-                                    <div className="absolute top-0 right-0 px-3 py-1 bg-red-600 text-white text-[10px] font-black rounded-bl-xl uppercase tracking-tighter">
-                                        ⚡ عاجل جداً
-                                    </div>
-                                )}
-
                                 <div className="flex gap-4">
                                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isUrgent ? 'bg-red-100 text-red-600' :
                                             isImportant ? 'bg-orange-100 text-orange-600' :
@@ -115,7 +111,7 @@ export default function PortalNotificationsPage() {
 
                                         {!notif.is_read && (
                                             <button
-                                                onClick={() => markAsRead(notif.id, notif.priority ? 'NOTIFICATION' : 'MESSAGE')}
+                                                onClick={() => markAsRead(notif.id)}
                                                 className="mt-3 text-[10px] font-black text-[#E60000] hover:underline flex items-center gap-1"
                                             >
                                                 <CheckCircle className="w-3 h-3" /> تم الاطلاع

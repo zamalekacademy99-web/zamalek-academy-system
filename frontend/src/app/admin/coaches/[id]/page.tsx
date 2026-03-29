@@ -41,7 +41,11 @@ function Toast({ message, type }: { message: string; type: "success" | "error" }
 }
 
 const DAYS = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
-const DEFAULT_PERMS = { attendance: true, ratings: true, financials: false };
+const DEFAULT_PERMS = {
+    can_manage_attendance: true,
+    can_manage_evaluations: true,
+    can_manage_payments: false
+};
 
 /* ══════════════════════════════════════════════════════════════════ */
 export default function AdminCoachProfilePage() {
@@ -256,9 +260,9 @@ export default function AdminCoachProfilePage() {
                     </div>
                     <div className="space-y-3">
                         {[
-                            { key: "attendance", label: "تسجيل الحضور", desc: "يمكنه تسجيل وتعديل حضور اللاعبين" },
-                            { key: "ratings", label: "تقييم اللاعبين", desc: "يمكنه إضافة تقييمات الأداء" },
-                            { key: "financials", label: "عرض المدفوعات", desc: "يمكنه الاطلاع على بيانات الاشتراكات" },
+                            { key: "can_manage_attendance", label: "تسجيل الحضور", desc: "يمكنه تسجيل وتعديل حضور اللاعبين" },
+                            { key: "can_manage_evaluations", label: "تقييم اللاعبين", desc: "يمكنه إضافة تقييمات الأداء" },
+                            { key: "can_manage_payments", label: "إدارة المدفوعات", desc: "يمكنه تسجيل وتحصيل اشتراكات اللاعبين" },
                         ].map(p => (
                             <label key={p.key} className="flex items-start gap-3 cursor-pointer rounded-lg hover:bg-slate-50 p-2 -mx-2 transition">
                                 <div className="relative mt-0.5 flex-shrink-0" onClick={() => setPerms(prev => ({ ...prev, [p.key]: !(prev as any)[p.key] }))}>

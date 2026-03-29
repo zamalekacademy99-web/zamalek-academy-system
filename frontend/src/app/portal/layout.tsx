@@ -86,7 +86,10 @@ export default function PortalLayout({
                                 <div className="relative">
                                     <Icon className={`w-6 h-6 ${isActive ? "fill-red-50 text-[#E60000]" : ""}`} strokeWidth={isActive ? 2.5 : 2} />
                                     {isNotif && unreadNotifs > 0 && (
-                                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-600 border-2 border-white rounded-full"></span>
+                                        <div className="absolute -top-1 -right-1 flex h-3 w-3">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600 border border-white"></span>
+                                        </div>
                                     )}
                                 </div>
                                 <span className="text-[10px] font-medium">{item.name}</span>
