@@ -74,7 +74,8 @@ app.get('/api/v1/health', (_req: Request, res: Response) => {
         status: 'success',
         message: 'Zamalek Academy API is running',
         port: String(port),
-        env: process.env.NODE_ENV || 'development'
+        env: process.env.NODE_ENV || 'development',
+        version: '1.0.2'
     });
 });
 

@@ -20,7 +20,7 @@ const cairo = Cairo({
 
 export const metadata: Metadata = {
   title: "Zamalek Academy - Gharbia",
-  description: "Management System for Zamalek Football Academy Branches in Gharbia.",
+  description: "Management System for Zamalek Football Academy Branches in Gharbia. v1.0.2",
 };
 
 export default function RootLayout({
