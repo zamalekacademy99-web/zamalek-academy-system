@@ -104,7 +104,17 @@ export const getAllPlayers = async (req: Request, res: Response): Promise<void> 
         const { branch_id, coach_id } = req.query;
         const filter: any = {};
         if (branch_id) filter.branch_id = String(branch_id);
-        if (coach_id) filter.coach_id = String(coach_id);
+        if (coach_id) {
+            const coach = await prisma.coach.findUnique({
+                where: { id: String(coach_id) },
+                include: { groups: true }
+            });
+            const groupIds = coach?.groups.map(g => g.id) || [];
+            filter.OR = [
+                { coach_id: String(coach_id) },
+                { group_id: { in: groupIds } }
+            ];
+        }
 
         const players = await prisma.player.findMany({
             where: filter,

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Plus, FileText, TrendingUp, AlertCircle, Loader2, User } from "lucide-react";
+import { Plus, FileText, TrendingUp, AlertCircle, Loader2, User, DollarSign, Tag } from "lucide-react";
 import { fetchApi } from "@/lib/api";
 import AddPaymentModal from "@/components/modals/AddPaymentModal";
 
@@ -101,26 +101,30 @@ export default function AdminPaymentsPage() {
                         <TrendingUp className="w-6 h-6" />
                     </div>
                     <div>
-                        <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-wider">المحصل (Actual)</p>
+                        <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-wider">إجمالي المحصل (Total)</p>
                         <h3 className="text-2xl font-black text-slate-900">{totalCollected.toLocaleString()} ج.م</h3>
                     </div>
                 </div>
                 <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4 text-right">
                     <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 shadow-inner shrink-0">
-                        <FileText className="w-6 h-6" />
+                        <DollarSign className="w-6 h-6" />
                     </div>
                     <div>
-                        <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-wider">المستهدف (Target)</p>
-                        <h3 className="text-2xl font-black text-slate-900">{expectedRevenue.toLocaleString()} ج.م</h3>
+                        <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-wider">اشتراكات شهرية</p>
+                        <h3 className="text-2xl font-black text-slate-900">
+                            {filteredPayments.filter(p => p.category === 'MONTHLY_FEE' || p.category === 'BOTH').reduce((sum, p) => sum + Number(p.amount), 0).toLocaleString()} ج.م
+                        </h3>
                     </div>
                 </div>
                 <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4 text-right">
-                    <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-red-500 shadow-inner shrink-0">
-                        <AlertCircle className="w-6 h-6" />
+                    <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500 shadow-inner shrink-0">
+                        <Tag className="w-6 h-6" />
                     </div>
                     <div>
-                        <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-wider">الديون (Pending)</p>
-                        <h3 className="text-2xl font-black text-red-600">{remainingDebt > 0 ? remainingDebt.toLocaleString() : 0} ج.م</h3>
+                        <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-wider">شنطة ولبس</p>
+                        <h3 className="text-2xl font-black text-slate-900">
+                            {filteredPayments.filter(p => p.category === 'KIT_BAG' || p.category === 'BOTH').reduce((sum, p) => sum + Number(p.amount), 0).toLocaleString()} ج.م
+                        </h3>
                     </div>
                 </div>
             </div>
