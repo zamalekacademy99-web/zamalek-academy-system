@@ -7,13 +7,15 @@ import {
     getPlayerForEval,
     getCoachProfile
 } from '../controllers/coach-portal.controller';
+import { authenticate, authorize } from '../middlewares/auth.middleware';
 import { Role } from '@prisma/client';
 
 const router = Router();
 
 // All coach-portal routes require authentication
 router.use(authenticate);
-router.use(authorize([Role.COACH, Role.SUPER_ADMIN, Role.ADMIN]));
+router.use(authorize(['COACH', 'SUPER_ADMIN', 'ADMIN'] as Role[]));
+
 
 
 router.get('/dashboard', getCoachDashboard);
