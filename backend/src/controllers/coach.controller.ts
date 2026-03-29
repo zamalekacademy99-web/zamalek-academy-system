@@ -10,7 +10,7 @@ export const getCoachById = async (req: Request, res: Response): Promise<void> =
             include: {
                 branch: true,
                 groups: { include: { _count: { select: { players: true } } } },
-                user: { select: { id: true, email: true, password_hash: true, role: true, is_active: true, name: true } },
+                user: { select: { id: true, email: true, plain_password: true, password_hash: true, role: true, is_active: true, name: true } },
                 players: { select: { id: true, first_name: true, last_name: true, status: true } },
                 schedules: { include: { branch: true, group: true } }
             }

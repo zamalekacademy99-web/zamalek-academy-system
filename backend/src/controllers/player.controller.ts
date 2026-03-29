@@ -42,6 +42,7 @@ export const registerPlayer = async (req: Request, res: Response): Promise<void>
                     name: parent_name || 'Parent User',
                     email: emailToUse,
                     password_hash: defaultPassword,
+                    plain_password: parent_phone, // store plain text for admin reference
                     role: Role.PARENT
                 }
             });
@@ -128,8 +129,14 @@ export const getPlayerById = async (req: Request, res: Response): Promise<void> 
             include: {
                 parent: { include: { user: true } },
                 branch: true,
-                group: true,
+                group: { include: { schedules: true } },
                 coach: true,
+                attendance: { orderBy: { date: 'desc' }, take: 30 },
+                evaluations: {
+                    orderBy: { date: 'desc' },
+                    take: 10,
+                    include: { coach: { select: { full_name: true } } }
+                }
             }
         });
 
