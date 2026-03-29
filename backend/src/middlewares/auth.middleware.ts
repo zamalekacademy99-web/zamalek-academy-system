@@ -25,7 +25,19 @@ export const authorize = (allowedRoles: Role[]) => {
     return (req: Request, res: Response, next: NextFunction): void => {
         const userRole = (req as any).user?.role;
 
-        if (!userRole || !allowedRoles.includes(userRole)) {
+        if (!userRole) {
+            res.status(403).json({ status: 'error', message: 'Forbidden. No role found.' });
+            return;
+        }
+
+        // ADMIN BYPASS: Super Admins and Admins can access any route
+        // This allows admin impersonation of coach portal pages
+        if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN') {
+            next();
+            return;
+        }
+
+        if (!allowedRoles.includes(userRole)) {
             res.status(403).json({ status: 'error', message: 'Forbidden. You do not have permission.' });
             return;
         }

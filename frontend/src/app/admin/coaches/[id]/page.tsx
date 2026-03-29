@@ -147,9 +147,10 @@ export default function AdminCoachProfilePage() {
                     {/* Open Coach Portal Button with coachId for impersonation */}
                     <button
                         onClick={() => {
-                            // Set impersonation keys so the coach portal hook resolves this coach's ID
+                            // Set ALL impersonation keys — dirty fix ensures portal always resolves correctly
                             localStorage.setItem('impersonateCoachId', coach.id);
                             localStorage.setItem('adminViewCoachId', coach.id);
+                            localStorage.setItem('coachId', coach.id); // force portal to treat this coach as "own"
                             router.push(`/coach/dashboard?coachId=${coach.id}`);
                         }}
                         className="flex items-center gap-1.5 bg-[#E60000] text-white text-xs font-bold px-3 py-2 rounded-xl hover:bg-red-700 transition"
@@ -157,7 +158,6 @@ export default function AdminCoachProfilePage() {
                         <ExternalLink className="w-3.5 h-3.5" />
                         بوابة المدرب
                     </button>
-
                 </div>
             </div>
 

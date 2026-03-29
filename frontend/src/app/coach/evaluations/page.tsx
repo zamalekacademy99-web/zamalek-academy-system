@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, Suspense } from "react";
 import { fetchApi } from "@/lib/api";
-import { Loader2, User, ChevronRight, Star } from "lucide-react";
+import { Loader2, User, ChevronRight, Star, RefreshCcw } from "lucide-react";
 import Link from "next/link";
 import { useCoachId } from "@/hooks/useCoachId";
 
@@ -9,29 +9,39 @@ function EvaluationsListContent() {
     const [loading, setLoading] = useState(true);
     const [coachData, setCoachData] = useState<any>(null);
     const [error, setError] = useState("");
+    const [retryCount, setRetryCount] = useState(0);
     const coachId = useCoachId();
 
     useEffect(() => {
+        // Don't fetch until coachId has had a chance to resolve
+        // coachId can be null on first render if localStorage hasn't been read yet
+        let cancelled = false;
+
         const loadDashboard = async () => {
-            // Even if coachId is null initially, useAuth/useCoachId will eventually resolve it
-            // or the backend will fall back to the authenticated user's coach profile.
+            setLoading(true);
+            setError("");
             try {
                 const url = coachId ? `/coach/dashboard?coachId=${coachId}` : "/coach/dashboard";
+                console.log("[Evaluations] Fetching dashboard:", url, "coachId:", coachId);
                 const res = await fetchApi(url);
+                if (cancelled) return;
                 if (res.success) {
                     setCoachData(res.data.coach);
                 } else {
                     setError(res.message || "فشل تحميل البيانات");
                 }
             } catch (err: any) {
+                if (cancelled) return;
+                console.error("[Evaluations] Error:", err);
                 setError(err.message || "حدث خطأ أثناء تحميل البيانات");
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
 
         loadDashboard();
-    }, [coachId]);
+        return () => { cancelled = true; };
+    }, [coachId, retryCount]);
 
     if (loading) {
         return (
@@ -44,9 +54,17 @@ function EvaluationsListContent() {
 
     if (error) {
         return (
-            <div className="bg-red-50 border border-red-100 text-red-700 p-6 rounded-2xl text-center max-w-lg mx-auto mt-10">
-                <p className="font-bold text-lg mb-2">خطأ في التحميل</p>
-                <p>{error}</p>
+            <div className="flex flex-col items-center justify-center min-h-[400px] gap-5">
+                <div className="bg-red-50 border border-red-100 text-red-700 p-6 rounded-2xl text-center max-w-lg w-full">
+                    <p className="font-bold text-lg mb-2">⚠️ خطأ في التحميل</p>
+                    <p className="text-sm mb-4">{error}</p>
+                    <button
+                        onClick={() => setRetryCount(c => c + 1)}
+                        className="inline-flex items-center gap-2 bg-[#E60000] text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-red-700 transition"
+                    >
+                        <RefreshCcw className="w-4 h-4" /> إعادة المحاولة
+                    </button>
+                </div>
             </div>
         );
     }
@@ -58,7 +76,17 @@ function EvaluationsListContent() {
                 <p className="text-slate-500">اختر لاعباً لتقييم أدائه الفني والبدني.</p>
             </div>
 
-            {coachData?.groups.map((group: any) => (
+            {(!coachData?.groups || coachData.groups.length === 0) && (
+                <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-300">
+                    <Star className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                    <p className="text-slate-500 font-bold mb-2">لا توجد مجموعات مسندة حالياً.</p>
+                    <p className="text-slate-400 text-sm">
+                        {coachId ? `جاري عرض بيانات المدرب: ${coachId}` : "تأكد من تسجيل الدخول كمدرب أو تفعيل وضع الإدارة."}
+                    </p>
+                </div>
+            )}
+
+            {coachData?.groups?.map((group: any) => (
                 <div key={group.id} className="space-y-4">
                     <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
                         <div className="w-2 h-6 bg-[#E60000] rounded-full"></div>
@@ -68,6 +96,10 @@ function EvaluationsListContent() {
                         </span>
                     </div>
 
+                    {(!group.players || group.players.length === 0) && (
+                        <p className="text-slate-400 text-sm py-4">لا يوجد لاعبون نشطون في هذه المجموعة.</p>
+                    )}
+
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {group.players?.map((player: any) => (
                             <Link
@@ -76,8 +108,8 @@ function EvaluationsListContent() {
                                 className="group bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-[#E60000] hover:shadow-md transition-all flex items-center justify-between"
                             >
                                 <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-red-50 group-hover:text-[#E60000] transition-colors">
-                                        <User className="w-6 h-6" />
+                                    <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-red-50 group-hover:text-[#E60000] transition-colors text-xl font-black">
+                                        {player.first_name?.[0]}
                                     </div>
                                     <div>
                                         <h3 className="font-bold text-slate-900 group-hover:text-[#E60000] transition-colors">
@@ -94,13 +126,6 @@ function EvaluationsListContent() {
                     </div>
                 </div>
             ))}
-
-            {(!coachData?.groups || coachData.groups.length === 0) && (
-                <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-300">
-                    <Star className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                    <p className="text-slate-400 font-medium">لا توجد مجموعات مسندة إليك حالياً.</p>
-                </div>
-            )}
         </div>
     );
 }
