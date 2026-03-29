@@ -4,7 +4,7 @@ import { Plus, Edit, Trash2, CheckCircle2 } from "lucide-react";
 import { fetchApi } from "@/lib/api";
 
 type Branch = { id: string; name: string };
-type Coach = { id: string; full_name: string; phone: string; branch_id: string; is_active: boolean; branch: Branch };
+type Coach = { id: string; full_name: string; phone: string; branch_id: string; is_active: boolean; branch: Branch; groups?: { id: string; name: string }[] };
 
 export default function CoachesPage() {
     const [coaches, setCoaches] = useState<Coach[]>([]);
@@ -208,6 +208,7 @@ export default function CoachesPage() {
                                     <th className="px-6 py-4">اسم المدرب</th>
                                     <th className="px-6 py-4">الهاتف</th>
                                     <th className="px-6 py-4">الفرع</th>
+                                    <th className="px-6 py-4">المجموعات المعينة</th>
                                     <th className="px-6 py-4">الحالة</th>
                                     <th className="px-6 py-4">الإجراءات</th>
                                 </tr>
@@ -218,6 +219,11 @@ export default function CoachesPage() {
                                         <td className="px-6 py-4 font-bold text-slate-800">{coach.full_name}</td>
                                         <td className="px-6 py-4" dir="ltr">{coach.phone}</td>
                                         <td className="px-6 py-4 text-[#E60000] font-medium">{coach.branch?.name}</td>
+                                        <td className="px-6 py-4 text-slate-700 font-medium">
+                                            {coach.groups && coach.groups.length > 0
+                                                ? coach.groups.map(g => g.name).join("، ")
+                                                : <span className="text-slate-400">بدون مجموعات</span>}
+                                        </td>
                                         <td className="px-6 py-4">
                                             <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${coach.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                                 {coach.is_active ? 'نشط' : 'غير نشط'}

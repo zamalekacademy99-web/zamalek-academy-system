@@ -20,7 +20,11 @@ export const getDashboard = async (req: Request, res: Response): Promise<void> =
             where: { parent_id: parentId },
             include: {
                 branch: true,
-                group: true,
+                group: {
+                    include: {
+                        schedules: { include: { branch: true, coach: true, group: true } }
+                    }
+                },
                 coach: true,
                 attendance: { orderBy: { date: 'desc' }, take: 5 },
                 payments: { orderBy: { date: 'desc' }, take: 1 }

@@ -11,7 +11,11 @@ export const getAllGroups = async (req: Request, res: Response): Promise<void> =
 
         const groups = await prisma.group.findMany({
             where: filter,
-            include: { branch: true }
+            include: {
+                branch: true,
+                coaches: true,
+                _count: { select: { players: true } }
+            }
         });
 
         res.status(200).json({ status: 'success', data: groups });
@@ -23,14 +27,24 @@ export const getAllGroups = async (req: Request, res: Response): Promise<void> =
 
 export const createGroup = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { name, branch_id, age_category } = req.body;
+        const { name, branch_id, age_category, is_active, notes, coach_ids } = req.body;
         if (!name || !branch_id || !age_category) {
             res.status(400).json({ status: 'error', message: 'Missing required fields' });
             return;
         }
 
         const newGroup = await prisma.group.create({
-            data: { name, branch_id, age_category }
+            data: {
+                name,
+                branch_id,
+                age_category,
+                is_active: is_active ?? true,
+                notes: notes || null,
+                coaches: coach_ids && coach_ids.length > 0 ? {
+                    connect: coach_ids.map((id: string) => ({ id }))
+                } : undefined
+            },
+            include: { coaches: true }
         });
 
         res.status(201).json({ status: 'success', data: newGroup });
@@ -43,11 +57,21 @@ export const createGroup = async (req: Request, res: Response): Promise<void> =>
 export const updateGroup = async (req: Request, res: Response): Promise<void> => {
     try {
         const { id } = req.params;
-        const { name, branch_id, age_category } = req.body;
+        const { name, branch_id, age_category, is_active, notes, coach_ids } = req.body;
 
         const updatedGroup = await prisma.group.update({
             where: { id: id as string },
-            data: { name, branch_id, age_category }
+            data: {
+                name,
+                branch_id,
+                age_category,
+                is_active,
+                notes,
+                coaches: coach_ids ? {
+                    set: coach_ids.map((id: string) => ({ id }))
+                } : undefined
+            },
+            include: { coaches: true }
         });
 
         res.status(200).json({ status: 'success', data: updatedGroup });

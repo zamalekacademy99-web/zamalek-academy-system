@@ -108,8 +108,11 @@ export default function PlayersDirectoryPage() {
                                                 {player.status === 'ACTIVE' ? 'نشط' : player.status}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap flex items-center gap-3">
-                                            <button onClick={() => handleDelete(player.id)} className="text-red-500 hover:text-red-700 p-1">
+                                        <td className="px-6 py-4 whitespace-nowrap flex items-center gap-4">
+                                            <Link href={`/admin/players/${player.id}/edit`} className="text-blue-600 hover:text-blue-800 transition-colors">
+                                                <Edit className="w-4 h-4" />
+                                            </Link>
+                                            <button onClick={() => handleDelete(player.id)} className="text-red-500 hover:text-red-700 transition-colors">
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
                                         </td>

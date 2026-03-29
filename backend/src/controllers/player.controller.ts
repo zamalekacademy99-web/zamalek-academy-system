@@ -20,10 +20,17 @@ export const registerPlayer = async (req: Request, res: Response): Promise<void>
         }
 
         // Step 1: Handle Parent (Find or Create)
-        let parent = await prisma.parent.findUnique({
-            where: { phone: parent_phone },
+        let parent = await prisma.parent.findFirst({
+            where: {
+                OR: [
+                    { phone: parent_phone },
+                    parent_email ? { user: { email: parent_email } } : {}
+                ].filter(condition => Object.keys(condition).length > 0)
+            },
             include: { user: true }
         });
+
+        const isNewParent = !parent;
 
         if (!parent) {
             // Create new User and Parent profile
@@ -79,8 +86,10 @@ export const registerPlayer = async (req: Request, res: Response): Promise<void>
 
         res.status(201).json({
             status: 'success',
-            message: 'Player registered successfully',
-            data: { player_id: newPlayer.id, parent_id: parent.id }
+            message: isNewParent
+                ? 'Player registered successfully. New parent account created.'
+                : 'Player registered successfully. Child was linked to the existing parent account.',
+            data: { player_id: newPlayer.id, parent_id: parent.id, is_new_parent: isNewParent }
         });
 
     } catch (error) {
@@ -107,6 +116,31 @@ export const getAllPlayers = async (req: Request, res: Response): Promise<void> 
         res.status(200).json({ status: 'success', data: players });
     } catch (error) {
         console.error('Error fetching players:', error);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+};
+
+export const getPlayerById = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const player = await prisma.player.findUnique({
+            where: { id: id as string },
+            include: {
+                parent: { include: { user: true } },
+                branch: true,
+                group: true,
+                coach: true,
+            }
+        });
+
+        if (!player) {
+            res.status(404).json({ status: 'error', message: 'Player not found' });
+            return;
+        }
+
+        res.status(200).json({ status: 'success', data: player });
+    } catch (error) {
+        console.error('Error fetching player:', error);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };

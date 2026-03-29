@@ -10,7 +10,10 @@ export const getAllCoaches = async (req: Request, res: Response): Promise<void> 
 
         const coaches = await prisma.coach.findMany({
             where: filter,
-            include: { branch: true }
+            include: {
+                branch: true,
+                groups: { select: { id: true, name: true, branch_id: true } }
+            }
         });
 
         res.status(200).json({ status: 'success', data: coaches });

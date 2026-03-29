@@ -79,9 +79,10 @@ export default function RegisterPlayerPage() {
 
             // Set success message with generated credentials
             setSuccessData({
-                email: `${formData.parent_phone}@zamalek-academy.local`,
+                isNewParent: response.data?.is_new_parent ?? true,
+                email: formData.parent_email || `${formData.parent_phone}@zamalek-academy.local`,
                 password: formData.parent_phone,
-                message: "تم تسجيل اللاعب وإنشاء حساب ولي الأمر بنجاح."
+                message: response.message || "تم تسجيل اللاعب بنجاح."
             });
 
             // Reset form
@@ -93,6 +94,7 @@ export default function RegisterPlayerPage() {
                 group_id: "",
                 coach_id: "",
                 parent_phone: "",
+                parent_email: "",
                 parent_name: "",
                 payment_amount: "",
                 payment_method: "CASH"
@@ -138,17 +140,19 @@ export default function RegisterPlayerPage() {
                         <CheckCircle2 className="w-6 h-6" />
                         {successData.message}
                     </div>
-                    <div className="bg-white p-4 rounded-md border border-green-100 flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-slate-600 mb-2">بيانات دخول ولي الأمر:</p>
-                            <p className="font-bold font-mono text-slate-900 mb-1" dir="ltr">Email: {successData.email}</p>
-                            <p className="font-bold font-mono text-slate-900" dir="ltr">Password: {successData.password}</p>
+                    {successData.isNewParent && (
+                        <div className="bg-white p-4 rounded-md border border-green-100 flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-slate-600 mb-2">بيانات دخول ولي الأمر (حساب جديد):</p>
+                                <p className="font-bold font-mono text-slate-900 mb-1" dir="ltr">Email: {successData.email}</p>
+                                <p className="font-bold font-mono text-slate-900" dir="ltr">Password: {successData.password}</p>
+                            </div>
+                            <button onClick={copyCredentials} type="button" className="flex flex-col items-center gap-1 text-slate-500 hover:text-[#E60000] transition-colors p-2">
+                                <Copy className="w-5 h-5" />
+                                <span className="text-xs font-bold">نسخ</span>
+                            </button>
                         </div>
-                        <button onClick={copyCredentials} className="flex flex-col items-center gap-1 text-slate-500 hover:text-[#E60000] transition-colors p-2">
-                            <Copy className="w-5 h-5" />
-                            <span className="text-xs font-bold">نسخ</span>
-                        </button>
-                    </div>
+                    )}
                 </div>
             )}
 
@@ -223,6 +227,13 @@ export default function RegisterPlayerPage() {
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-slate-700">اسم ولي الأمر</label>
                                     <input value={formData.parent_name} onChange={e => handleFormChange('parent_name', e.target.value)} type="text" className="w-full h-11 px-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#E60000] focus:border-transparent transition" placeholder="في حال إنشاء حساب جديد" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">البريد الإلكتروني (اختياري)</label>
+                                    <input value={(formData as any).parent_email || ""} onChange={e => handleFormChange('parent_email', e.target.value)} type="email" className="w-full h-11 px-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#E60000] focus:border-transparent transition text-left" placeholder="example@mail.com" dir="ltr" />
+                                    <p className="text-xs text-slate-500">للبحث بدقة عن الحساب وتفادي عمل حسابات مكررة.</p>
                                 </div>
                             </div>
 

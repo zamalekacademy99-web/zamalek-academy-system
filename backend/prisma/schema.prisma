@@ -116,6 +116,7 @@ model Coach {
   players    Player[]
   schedules  Schedule[]
   evaluations Evaluation[]
+  groups     Group[]
 
   @@map("coaches")
 }
@@ -131,6 +132,9 @@ model Group {
   branch       Branch   @relation(fields: [branch_id], references: [id], onDelete: Cascade)
   players      Player[]
   schedules    Schedule[]
+  coaches      Coach[]
+  is_active    Boolean  @default(true)
+  notes        String?  @db.Text
 
   @@map("groups")
 }

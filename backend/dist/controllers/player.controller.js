@@ -15,10 +15,16 @@ const registerPlayer = async (req, res) => {
             return;
         }
         // Step 1: Handle Parent (Find or Create)
-        let parent = await db_1.default.parent.findUnique({
-            where: { phone: parent_phone },
+        let parent = await db_1.default.parent.findFirst({
+            where: {
+                OR: [
+                    { phone: parent_phone },
+                    parent_email ? { user: { email: parent_email } } : {}
+                ].filter(condition => Object.keys(condition).length > 0)
+            },
             include: { user: true }
         });
+        const isNewParent = !parent;
         if (!parent) {
             // Create new User and Parent profile
             const defaultPassword = await bcrypt_1.default.hash(parent_phone, 10); // temporary password = phone

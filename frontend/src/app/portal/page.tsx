@@ -8,11 +8,10 @@ type Child = {
     id: string;
     first_name: string;
     last_name: string;
-    group: { name: string };
-    branch: { name: string };
     coach: { full_name: string };
     status: string;
     payments: any[];
+    group: { name: string; schedules: any[] };
 };
 
 type Alert = { type: string, message: string };
@@ -23,6 +22,7 @@ export default function PortalDashboard() {
     const [unreadNotifs, setUnreadNotifs] = useState(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [activeChildId, setActiveChildId] = useState<string | null>(null);
 
     // Hardcode user name for now as we don't have user context in this simple component,
     // Alternatively, we could fetch /auth/me or pull from localStorage.
@@ -41,6 +41,9 @@ export default function PortalDashboard() {
             try {
                 const res = await fetchApi('/parent/dashboard');
                 setChildren(res.data.children);
+                if (res.data.children.length > 0) {
+                    setActiveChildId(res.data.children[0].id);
+                }
                 setAlerts(res.data.alerts);
                 setUnreadNotifs(res.data.unread_notifications);
             } catch (err: any) {
@@ -87,27 +90,62 @@ export default function PortalDashboard() {
                 </div>
             ))}
 
-            {/* Next Session Hero Card (using first child as highlight) */}
-            {firstChild ? (
-                <div className="bg-gradient-to-br from-[#E60000] to-red-600 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden">
-                    <div className="absolute -left-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
-                    <div className="relative z-10 flex flex-col h-full justify-between">
-                        <div className="flex justify-between items-start mb-4">
-                            <div>
-                                <span className="bg-white/20 px-2.5 py-1 rounded-full text-xs font-semibold backdrop-blur-sm">{firstChild.first_name} {firstChild.last_name}</span>
+            {/* Sibling Switcher (If > 1 children) */}
+            {children.length > 1 && (
+                <div className="flex bg-slate-200 p-1 rounded-lg overflow-x-auto hide-scrollbar">
+                    {children.map(child => (
+                        <button
+                            key={child.id}
+                            onClick={() => setActiveChildId(child.id)}
+                            className={`flex-1 min-w-[100px] text-center text-sm font-bold py-2 px-3 rounded-md transition-all ${activeChildId === child.id
+                                    ? 'bg-white text-[#E60000] shadow-sm'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-300'
+                                }`}
+                        >
+                            {child.first_name}
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            {/* Next Session Hero Card (using active child) */}
+            {activeChildId ? (() => {
+                const activeChild = children.find(c => c.id === activeChildId)!;
+                const nextSchedule = activeChild.group?.schedules?.[0]; // Simplification for MVP: picking the first schedule. Proper logic would match day_of_week with today.
+                const DAYS = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+
+                return (
+                    <div className="bg-gradient-to-br from-[#E60000] to-red-600 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden transition-all duration-300">
+                        <div className="absolute -left-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl flex-shrink-0"></div>
+                        <div className="relative z-10 flex flex-col h-full justify-between">
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <span className="bg-white/20 px-2.5 py-1 rounded-full text-xs font-semibold backdrop-blur-sm shadow-sm">{activeChild.first_name} {activeChild.last_name}</span>
+                                </div>
+                                <CalendarClock className="w-6 h-6 text-white/80" />
                             </div>
-                            <CalendarClock className="w-6 h-6 text-white/80" />
-                        </div>
-                        <div>
-                            <p className="text-red-100 text-sm font-medium mb-1">المجموعة التدريبية</p>
-                            <h3 className="text-2xl font-black tracking-tight mb-2">{firstChild.group?.name || 'غير محدد'}</h3>
-                            <p className="text-white/90 text-sm flex items-center gap-1.5 opacity-90">
-                                {firstChild.branch?.name} - {firstChild.coach?.full_name}
-                            </p>
+                            <div>
+                                <p className="text-red-100 text-sm font-medium mb-1">المجموعة التدريبية • {activeChild.group?.name || 'غير محدد'}</p>
+                                {nextSchedule ? (
+                                    <>
+                                        <h3 className="text-2xl font-black tracking-tight mb-2">
+                                            {DAYS[nextSchedule.day_of_week]} • {nextSchedule.start_time}
+                                        </h3>
+                                        <p className="text-white/90 text-sm flex items-center gap-1.5 opacity-90">
+                                            {nextSchedule.branch?.name} - الملعب: {nextSchedule.field_name || "الرئيسي"} - الكابتن: {nextSchedule.coach?.full_name}
+                                        </p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <h3 className="text-lg font-bold tracking-tight mb-2">لا توجد مواعيد تدريب مسجلة</h3>
+                                        <p className="text-white/90 text-sm opacity-90">يرجى مراجعة إدارة الأكاديمية.</p>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            ) : (
+                );
+            })() : (
                 <div className="bg-slate-50 border border-slate-200 border-dashed rounded-xl p-8 text-center">
                     <p className="text-slate-500 font-medium text-sm">لا يوجد أبناء مسجلين بحسابك حالياً.</p>
                 </div>
