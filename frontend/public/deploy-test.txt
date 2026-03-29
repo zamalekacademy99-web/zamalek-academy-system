@@ -1,0 +1,2 @@
+DEPLOYMENT SYNC TEST v1.0.4 - If you see this, the frontend is correctly syncing with the latest main branch.
+Timestamp: 2026-03-29 05:40:00 (Coach Portal Credentials Fix)
