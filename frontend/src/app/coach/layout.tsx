@@ -41,9 +41,10 @@ function CoachLayoutInner({ children }: { children: React.ReactNode }) {
             if (res.data) {
                 setPermissions(res.data.permissions || {});
             }
-            // Fetch unread notifications count (we can use a generic endpoint or dashboard)
-            const notifRes = await fetchApi('/parent/dashboard'); // Reusing for count or create new
-            setUnreadCount(notifRes.data.unread_notifications || 0);
+            // Fetch unread notifications from the generic endpoint
+            const notifRes = await fetchApi('/notifications');
+            const unread = (notifRes.data || []).filter((n: any) => !n.is_read).length;
+            setUnreadCount(unread);
         } catch (e) { }
     };
 

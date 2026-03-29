@@ -13,7 +13,7 @@ export default function PortalNotificationsPage() {
     const loadNotifications = async () => {
         setLoading(true);
         try {
-            const res = await fetchApi('/parent/notifications');
+            const res = await fetchApi('/notifications');
             setNotifications(res.data || []);
         } catch (err) {
             console.error('Failed to load notifications:', err);
@@ -83,15 +83,15 @@ export default function PortalNotificationsPage() {
                             <div
                                 key={notif.id}
                                 className={`p-5 rounded-2xl border-2 transition-all relative overflow-hidden ${notif.is_read ? 'bg-white border-slate-100 opacity-75' :
-                                        isUrgent ? 'bg-red-50 border-red-200 shadow-sm' :
-                                            isImportant ? 'bg-orange-50 border-orange-200 shadow-sm' :
-                                                'bg-white border-white shadow-sm'
+                                    isUrgent ? 'bg-red-50 border-red-200 shadow-sm' :
+                                        isImportant ? 'bg-orange-50 border-orange-200 shadow-sm' :
+                                            'bg-white border-white shadow-sm'
                                     }`}
                             >
                                 <div className="flex gap-4">
                                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${isUrgent ? 'bg-red-100 text-red-600' :
-                                            isImportant ? 'bg-orange-100 text-orange-600' :
-                                                'bg-blue-50 text-blue-500'
+                                        isImportant ? 'bg-orange-100 text-orange-600' :
+                                            'bg-blue-50 text-blue-500'
                                         }`}>
                                         {isUrgent ? <Zap className="w-6 h-6" /> : <Info className="w-6 h-6" />}
                                     </div>

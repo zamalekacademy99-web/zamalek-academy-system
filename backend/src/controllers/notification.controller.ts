@@ -137,3 +137,24 @@ export const markAllNotificationsRead = async (req: Request, res: Response): Pro
         res.status(500).json({ status: 'error', message: error.message || 'Internal server error' });
     }
 };
+
+export const getNotifications = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const user = (req as any).user;
+        if (!user) {
+            res.status(401).json({ status: 'error', message: 'Unauthorized' });
+            return;
+        }
+
+        const notifications = await prisma.notification.findMany({
+            where: { user_id: user.id },
+            orderBy: { created_at: 'desc' },
+            take: 50
+        });
+
+        res.status(200).json({ status: 'success', data: notifications });
+    } catch (error: any) {
+        console.error('Error fetching notifications:', error);
+        res.status(500).json({ status: 'error', message: error.message || 'Internal server error' });
+    }
+};
