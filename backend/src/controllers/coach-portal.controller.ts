@@ -37,18 +37,49 @@ export const getCoachProfile = async (req: Request, res: Response): Promise<void
 // GET /api/v1/coach/dashboard
 export const getCoachDashboard = async (req: Request, res: Response): Promise<void> => {
     try {
-        const coachId = (req as any).user?.coachId;
+        const userId = (req as any).user?.id;
+        const coachIdFromToken = (req as any).user?.coachId;
         const role = (req as any).user?.role;
-        const impersonateId = req.query.coachId as string;
+        const queryCoachId = req.query.coachId as string;
 
-        let targetId = coachId;
-        if (impersonateId && (role === 'ADMIN' || role === 'SUPER_ADMIN')) {
-            targetId = impersonateId;
+        // STRICT SYSTEM OVERRIDE: Admin Bypass
+        if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+            console.log('[CoachDashboard] Admin bypass triggered. queryCoachId:', queryCoachId);
+            // If admin, we allow fetching ANY coachId passed in query
+            if (queryCoachId) {
+                const coach = await (prisma as any).coach.findUnique({
+                    where: { id: queryCoachId },
+                    include: {
+                        groups: {
+                            include: {
+                                players: { select: { id: true, first_name: true, last_name: true } },
+                                schedules: { include: { branch: true } }
+                            }
+                        },
+                        schedules: { include: { branch: true, group: true } },
+                        branch: true
+                    }
+                });
+                if (coach) {
+                    res.json({
+                        success: true,
+                        data: {
+                            coach: {
+                                id: coach.id,
+                                full_name: coach.full_name,
+                                branch: coach.branch?.name,
+                                groups: coach.groups,
+                                todaySchedules: coach.schedules.filter((s: any) => s.day_of_week === new Date().getDay())
+                            }
+                        }
+                    });
+                    return;
+                }
+            }
         }
 
+        let targetId = coachIdFromToken;
         if (!targetId) {
-            // Fallback to user_id if coachId not in token yet (for older tokens)
-            const userId = (req as any).user?.id;
             const coach = await (prisma as any).coach.findUnique({ where: { user_id: userId } });
             targetId = coach?.id;
         }
