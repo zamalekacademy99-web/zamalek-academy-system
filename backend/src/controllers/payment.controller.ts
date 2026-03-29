@@ -90,7 +90,11 @@ export const getPlayerFinancialStatement = async (req: Request, res: Response): 
 
 export const getAllPayments = async (req: Request, res: Response): Promise<void> => {
     try {
+        const { recorder_id } = req.query;
+        const filter = recorder_id ? { recorded_by: String(recorder_id) } : {};
+
         const payments = await prisma.payment.findMany({
+            where: filter,
             include: {
                 player: true,
                 recorder: { select: { name: true } }
