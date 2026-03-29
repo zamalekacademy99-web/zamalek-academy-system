@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAllCoaches, getCoachById, createCoach, updateCoach, deleteCoach, createCoachAccount, resetCoachPassword } from '../controllers/coach.controller';
+import { getAllCoaches, getCoachById, createCoach, updateCoach, deleteCoach, createCoachAccount, resetCoachPassword, normalizeCoachEmail } from '../controllers/coach.controller';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 import type { Request, Response } from 'express';
 
@@ -23,6 +23,9 @@ router.post('/:id/create-account', authenticate, authorize(['ADMIN', 'SUPER_ADMI
 
 // Reset coach password to phone number
 router.post('/:id/reset-password', authenticate, authorize(['ADMIN', 'SUPER_ADMIN']), resetCoachPassword);
+
+// Normalize coach email to English (No Arabic)
+router.post('/:id/normalize-email', authenticate, authorize(['ADMIN', 'SUPER_ADMIN']), normalizeCoachEmail);
 
 
 export default router;

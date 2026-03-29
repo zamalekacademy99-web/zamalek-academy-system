@@ -153,6 +153,35 @@ export const resetCoachPassword = async (req: Request, res: Response): Promise<v
     }
 };
 
+export const normalizeCoachEmail = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const coach = await prisma.coach.findUnique({
+            where: { id: String(id) },
+            include: { user: true }
+        });
+
+        if (!coach || !coach.user_id || !coach.user) {
+            res.status(404).json({ status: 'error', message: 'Coach user account not found.' });
+            return;
+        }
+
+        const normalized = slugifyName(coach.full_name);
+        const shortId = Math.random().toString(36).substring(2, 5);
+        const newEmail = `${normalized || 'coach'}.${shortId}@zamalek-academy.local`;
+
+        await prisma.user.update({
+            where: { id: coach.user_id },
+            data: { email: newEmail }
+        });
+
+        res.status(200).json({ status: 'success', message: 'Email normalized to English successfully!', newEmail });
+    } catch (error: any) {
+        console.error('Error normalizing email:', error);
+        res.status(500).json({ status: 'error', message: error.message || 'Internal server error' });
+    }
+};
+
 export const createCoachAccount = async (req: Request, res: Response): Promise<void> => {
     try {
         const { id } = req.params;

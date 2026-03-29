@@ -188,7 +188,27 @@ export default function AdminCoachProfilePage() {
                             >
                                 إعادة تعيين كلمة المرور (Reset)
                             </button>
+
+                            {/* Show Normalize button only if email is Arabic/Non-ASCII */}
+                            {coach.user.email && /[^\x00-\x7F]/.test(coach.user.email) && (
+                                <button
+                                    onClick={async () => {
+                                        if (!id || !confirm("البريد الحالي يحتوي على رموز عربية. هل تريد تحويله للإنجليزية تلقائياً؟")) return;
+                                        try {
+                                            const res = await fetchApi(`/coaches/${id}/normalize-email`, { method: "POST" });
+                                            showToast(`تم التحويل إلى: ${res.newEmail} ✅`);
+                                            load();
+                                        } catch (err: any) {
+                                            showToast("فشل التحويل: " + err.message, "error");
+                                        }
+                                    }}
+                                    className="w-full py-2 bg-[#E60000] text-white rounded-xl text-xs font-black hover:bg-red-700 transition shadow-sm mt-1"
+                                >
+                                    تحويل البريد للإنجليزية (ASCII)
+                                </button>
+                            )}
                         </div>
+
 
                     ) : (
                         <div className="py-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-300 space-y-5">
