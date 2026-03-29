@@ -2,6 +2,32 @@ import { Request, Response } from 'express';
 
 import prisma from '../db';
 
+export const getCoachById = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const coach = await prisma.coach.findUnique({
+            where: { id: id as string },
+            include: {
+                branch: true,
+                groups: { include: { _count: { select: { players: true } } } },
+                user: { select: { id: true, email: true, password_hash: true, role: true, is_active: true, name: true } },
+                players: { select: { id: true, first_name: true, last_name: true, status: true } },
+                schedules: { include: { branch: true, group: true } }
+            }
+        });
+
+        if (!coach) {
+            res.status(404).json({ status: 'error', message: 'Coach not found' });
+            return;
+        }
+
+        res.status(200).json({ status: 'success', data: coach });
+    } catch (error) {
+        console.error('Error fetching coach by id:', error);
+        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+};
+
 
 export const getAllCoaches = async (req: Request, res: Response): Promise<void> => {
     try {

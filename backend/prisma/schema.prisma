@@ -10,6 +10,7 @@ datasource db {
 enum Role {
   SUPER_ADMIN
   ADMIN
+  COACH
   PARENT
 }
 
@@ -117,6 +118,7 @@ model Coach {
   schedules  Schedule[]
   evaluations Evaluation[]
   groups     Group[]
+  attendance_logged Attendance[] @relation("AttendanceByCoach")
 
   @@map("coaches")
 }
@@ -204,6 +206,7 @@ model Attendance {
   id          String           @id @default(uuid()) @db.Uuid
   player_id   String           @db.Uuid
   schedule_id String           @db.Uuid
+  coach_id    String?          @db.Uuid
   date        DateTime         @db.Date
   status      AttendanceStatus @default(PRESENT)
   notes       String?          @db.Text
@@ -212,6 +215,7 @@ model Attendance {
 
   player      Player   @relation(fields: [player_id], references: [id], onDelete: Cascade)
   schedule    Schedule @relation(fields: [schedule_id], references: [id], onDelete: Cascade)
+  coach       Coach?   @relation("AttendanceByCoach", fields: [coach_id], references: [id], onDelete: SetNull)
 
   @@unique([player_id, schedule_id, date])
   @@map("attendance")

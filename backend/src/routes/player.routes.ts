@@ -1,10 +1,11 @@
 import { Router } from 'express';
-import { getAllPlayers, registerPlayer, updatePlayer, deletePlayer } from '../controllers/player.controller';
-import { authenticate } from '../middlewares/auth.middleware'; // Removed authorize to allow standard Admins
+import { getAllPlayers, getPlayerById, registerPlayer, updatePlayer, deletePlayer } from '../controllers/player.controller';
+import { authenticate } from '../middlewares/auth.middleware';
 
 const router = Router();
 
-router.get('/', authenticate, getAllPlayers); // Optional: add authorization layer
+router.get('/', authenticate, getAllPlayers);
+router.get('/:id', authenticate, getPlayerById);
 router.post('/register', authenticate, registerPlayer);
 router.put('/:id', authenticate, updatePlayer);
 router.delete('/:id', authenticate, deletePlayer);

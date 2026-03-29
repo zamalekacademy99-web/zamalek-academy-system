@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Plus, Edit, Trash2, CheckCircle2 } from "lucide-react";
+import { Plus, Edit, Trash2, CheckCircle2, ExternalLink } from "lucide-react";
 import { fetchApi } from "@/lib/api";
+import Link from "next/link";
 
 type Branch = { id: string; name: string };
 type Coach = { id: string; full_name: string; phone: string; branch_id: string; is_active: boolean; branch: Branch; groups?: { id: string; name: string }[] };
@@ -237,6 +238,13 @@ export default function CoachesPage() {
                                             >
                                                 <Edit className="w-4 h-4" />
                                             </button>
+                                            <Link
+                                                href={`/admin/coaches/${coach.id}`}
+                                                className="text-slate-500 hover:text-slate-700 p-1"
+                                                title="عرض الملف الشخصي"
+                                            >
+                                                <ExternalLink className="w-4 h-4" />
+                                            </Link>
                                             <button
                                                 onClick={() => handleDelete(coach.id)}
                                                 className="text-red-600 hover:text-red-800 p-1"

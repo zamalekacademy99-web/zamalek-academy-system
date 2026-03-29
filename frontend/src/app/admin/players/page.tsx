@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { UserPlus, Search, Filter, Trash2, Edit } from "lucide-react";
+import { UserPlus, Search, Filter, Trash2, Edit, ExternalLink } from "lucide-react";
 import { fetchApi } from "@/lib/api";
 
 type Player = {
@@ -109,6 +109,9 @@ export default function PlayersDirectoryPage() {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap flex items-center gap-4">
+                                            <Link href={`/admin/players/${player.id}`} className="text-slate-500 hover:text-slate-700 transition-colors" title="عرض الملف الشخصي">
+                                                <ExternalLink className="w-4 h-4" />
+                                            </Link>
                                             <Link href={`/admin/players/${player.id}/edit`} className="text-blue-600 hover:text-blue-800 transition-colors">
                                                 <Edit className="w-4 h-4" />
                                             </Link>
