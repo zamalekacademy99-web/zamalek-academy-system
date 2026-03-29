@@ -15,6 +15,7 @@ import parentRoutes from './routes/parent.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import notificationRoutes from './routes/notification.routes';
 import coachPortalRoutes from './routes/coach-portal.routes';
+import messageRoutes from './routes/message.routes';
 import { startAutomationService } from './services/automation.service';
 
 
@@ -40,6 +41,7 @@ app.use('/api/v1/parent', parentRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/coach', coachPortalRoutes);
+app.use('/api/v1/messages', messageRoutes);
 
 // Basic health check route
 app.get('/api/v1/health', (req: Request, res: Response) => {

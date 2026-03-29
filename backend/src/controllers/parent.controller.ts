@@ -44,7 +44,7 @@ export const getDashboard = async (req: Request, res: Response): Promise<void> =
             if (p.status !== 'ACTIVE') alerts.push({ type: 'STATUS', message: `حساب ${p.first_name} غير نشط` });
         });
 
-        res.status(200).json({ status: 'success', data: { children: players, alerts, unread_notifications: unreadNotifications } });
+        res.status(200).json({ status: 'success', data: { parent_id: parentId, children: players, alerts, unread_notifications: unreadNotifications } });
     } catch (error) {
         console.error('Error fetching parent dashboard:', error);
         res.status(500).json({ status: 'error', message: 'Internal server error' });

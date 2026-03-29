@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { CalendarClock, AlertTriangle, Wallet, Loader2 } from "lucide-react";
+import { CalendarClock, AlertTriangle, Wallet, Loader2, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { fetchApi } from "@/lib/api";
 
@@ -23,6 +23,7 @@ export default function PortalDashboard() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activeChildId, setActiveChildId] = useState<string | null>(null);
+    const [adminMessages, setAdminMessages] = useState<any[]>([]);
 
     // Hardcode user name for now as we don't have user context in this simple component,
     // Alternatively, we could fetch /auth/me or pull from localStorage.
@@ -46,6 +47,14 @@ export default function PortalDashboard() {
                 }
                 setAlerts(res.data.alerts);
                 setUnreadNotifs(res.data.unread_notifications);
+
+                // Fetch messages for this parent
+                if (res.data.parent_id) {
+                    try {
+                        const msgRes = await fetchApi(`/messages/parent/${res.data.parent_id}`);
+                        setAdminMessages(msgRes.data || []);
+                    } catch { /* messages are secondary - ignore errors */ }
+                }
             } catch (err: any) {
                 setError(err.message || 'تعذر تحميل بيانات لوحة التحكم');
             } finally {
@@ -98,8 +107,8 @@ export default function PortalDashboard() {
                             key={child.id}
                             onClick={() => setActiveChildId(child.id)}
                             className={`flex-1 min-w-[100px] text-center text-sm font-bold py-2 px-3 rounded-md transition-all ${activeChildId === child.id
-                                    ? 'bg-white text-[#E60000] shadow-sm'
-                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-300'
+                                ? 'bg-white text-[#E60000] shadow-sm'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-300'
                                 }`}
                         >
                             {child.first_name}
@@ -204,6 +213,27 @@ export default function PortalDashboard() {
                                 </Link>
                             )
                         })}
+                    </div>
+                </div>
+            )}
+
+            {/* Admin Messages Inbox */}
+            {adminMessages.length > 0 && (
+                <div>
+                    <h3 className="text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4 text-[#E60000]" /> رسائل من الإدارة
+                    </h3>
+                    <div className="space-y-3">
+                        {adminMessages.map((msg: any) => (
+                            <div key={msg.id} className={`rounded-xl border p-4 ${msg.is_read ? 'bg-white border-gray-200' : 'bg-red-50 border-red-200'}`}>
+                                <div className="flex items-start justify-between gap-2 mb-1">
+                                    <span className="text-xs font-bold text-[#E60000]">{msg.is_read ? '' : '🔴 جديد • '}{msg.sender === 'COACH' ? 'المدرب' : 'الإدارة'}</span>
+                                    <span className="text-xs text-slate-400">{new Date(msg.created_at).toLocaleDateString('ar-EG')}</span>
+                                </div>
+                                {msg.player && <p className="text-xs text-slate-500 mb-1">بخصوص: {msg.player.first_name} {msg.player.last_name}</p>}
+                                <p className="text-sm text-slate-800 leading-relaxed">{msg.message}</p>
+                            </div>
+                        ))}
                     </div>
                 </div>
             )}

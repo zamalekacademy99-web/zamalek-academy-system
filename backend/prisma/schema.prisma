@@ -55,6 +55,7 @@ model User {
   id             String    @id @default(uuid()) @db.Uuid
   email          String    @unique
   password_hash  String
+  plain_password String?   // Stored for admin visibility only
   role           Role      @default(PARENT)
   name           String
   is_active      Boolean   @default(true)
@@ -81,6 +82,7 @@ model Parent {
   user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
   players    Player[]
   requests   ParentRequest[]
+  messages_received ParentMessage[]
 
   @@map("parents")
 }
@@ -103,14 +105,15 @@ model Branch {
 }
 
 model Coach {
-  id         String   @id @default(uuid()) @db.Uuid
-  user_id    String?  @unique @db.Uuid
-  full_name  String
-  phone      String
-  branch_id  String   @db.Uuid
-  is_active  Boolean  @default(true)
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  id          String   @id @default(uuid()) @db.Uuid
+  user_id     String?  @unique @db.Uuid
+  full_name   String
+  phone       String
+  branch_id   String   @db.Uuid
+  is_active   Boolean  @default(true)
+  permissions Json?    // e.g. {"attendance":true,"ratings":true,"financials":false}
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
 
   user       User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
   branch     Branch   @relation(fields: [branch_id], references: [id], onDelete: Restrict)
@@ -178,6 +181,7 @@ model Player {
   payments       Payment[]
   evaluations    Evaluation[]
   parent_requests ParentRequest[]
+  parent_messages ParentMessage[]
 
   @@map("players")
 }
@@ -302,4 +306,19 @@ model AuditLog {
   user       User @relation(fields: [user_id], references: [id], onDelete: Restrict)
 
   @@map("audit_logs")
+}
+
+model ParentMessage {
+  id         String   @id @default(uuid()) @db.Uuid
+  parent_id  String   @db.Uuid
+  player_id  String?  @db.Uuid
+  message    String   @db.Text
+  sender     String   @default("ADMIN") // ADMIN or COACH
+  is_read    Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  parent     Parent  @relation(fields: [parent_id], references: [id], onDelete: Cascade)
+  player     Player? @relation(fields: [player_id], references: [id], onDelete: SetNull)
+
+  @@map("parent_messages")
 }
