@@ -15,9 +15,17 @@ export default function CoachesPage() {
     const [success, setSuccess] = useState<string | null>(null);
 
     const [isFormOpen, setIsFormOpen] = useState(false);
-    const [formData, setFormData] = useState({ id: "", full_name: "", phone: "", branch_id: "", is_active: true });
+    const [formData, setFormData] = useState({
+        id: "",
+        full_name: "",
+        phone: "",
+        branch_id: "",
+        is_active: true,
+        group_ids: [] as string[]
+    });
     const [isEditing, setIsEditing] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [groups, setGroups] = useState<{ id: string; name: string; branch_id: string }[]>([]);
 
     useEffect(() => {
         loadData();
@@ -26,12 +34,14 @@ export default function CoachesPage() {
     const loadData = async () => {
         try {
             setLoading(true);
-            const [cRes, bRes] = await Promise.all([
+            const [cRes, bRes, gRes] = await Promise.all([
                 fetchApi("/coaches"),
-                fetchApi("/branches")
+                fetchApi("/branches"),
+                fetchApi("/groups")
             ]);
             setCoaches(cRes.data);
             setBranches(bRes.data);
+            setGroups(gRes.data);
             setError(null);
         } catch (err: any) {
             setError("عذراً، حدث خطأ أثناء تحميل البيانات.");
@@ -42,15 +52,38 @@ export default function CoachesPage() {
 
     const handleOpenForm = (coach?: Coach) => {
         if (coach) {
-            setFormData({ id: coach.id, full_name: coach.full_name, phone: coach.phone, branch_id: coach.branch_id, is_active: coach.is_active });
+            setFormData({
+                id: coach.id,
+                full_name: coach.full_name,
+                phone: coach.phone,
+                branch_id: coach.branch_id,
+                is_active: coach.is_active,
+                group_ids: coach.groups ? coach.groups.map(g => g.id) : []
+            });
             setIsEditing(true);
         } else {
-            setFormData({ id: "", full_name: "", phone: "", branch_id: branches[0]?.id || "", is_active: true });
+            setFormData({
+                id: "",
+                full_name: "",
+                phone: "",
+                branch_id: branches[0]?.id || "",
+                is_active: true,
+                group_ids: []
+            });
             setIsEditing(false);
         }
         setIsFormOpen(true);
         setSuccess(null);
         setError(null);
+    };
+
+    const handleGroupToggle = (groupId: string) => {
+        setFormData(prev => ({
+            ...prev,
+            group_ids: prev.group_ids.includes(groupId)
+                ? prev.group_ids.filter(id => id !== groupId)
+                : [...prev.group_ids, groupId]
+        }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -60,22 +93,29 @@ export default function CoachesPage() {
         setSuccess(null);
 
         try {
+            const payload = {
+                full_name: formData.full_name,
+                phone: formData.phone,
+                branch_id: formData.branch_id,
+                is_active: formData.is_active,
+                group_ids: formData.group_ids
+            };
+
             if (isEditing) {
                 await fetchApi(`/coaches/${formData.id}`, {
                     method: 'PUT',
-                    body: JSON.stringify({ full_name: formData.full_name, phone: formData.phone, branch_id: formData.branch_id, is_active: formData.is_active })
+                    body: JSON.stringify(payload)
                 });
                 setSuccess("تم تحديث المدرب بنجاح.");
             } else {
                 await fetchApi("/coaches", {
                     method: 'POST',
-                    body: JSON.stringify({ full_name: formData.full_name, phone: formData.phone, branch_id: formData.branch_id })
+                    body: JSON.stringify(payload)
                 });
                 setSuccess("تم إضافة المدرب بنجاح.");
             }
             setIsFormOpen(false);
-            const cRes = await fetchApi("/coaches");
-            setCoaches(cRes.data);
+            loadData();
         } catch (err: any) {
             setError(err.message || "حدث خطأ أثناء الحفظ.");
         } finally {
@@ -95,66 +135,73 @@ export default function CoachesPage() {
         }
     };
 
+    const currentBranchGroups = groups.filter(g => g.branch_id === formData.branch_id);
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">إدارة المدربين</h1>
-                    <p className="text-slate-500 text-sm mt-1">سجل المدربين والأجهزة الفنية بكل فرع.</p>
+                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">إدارة المدربين <span className="text-[#E60000] text-sm font-bold bg-red-50 px-2 py-1 rounded ml-2">v1.7.0</span></h1>
+                    <p className="text-slate-500 text-sm mt-1 font-medium">سجل المدربين والمجموعات المسئولين عنها بكل فرع.</p>
                 </div>
 
                 {!isFormOpen && (
                     <button
                         onClick={() => handleOpenForm()}
-                        className="bg-[#E60000] hover:bg-red-700 text-white px-4 py-2 rounded-md flex items-center gap-2 text-sm font-medium transition-colors"
+                        className="bg-[#E60000] hover:bg-black text-white px-6 py-3 rounded-xl flex items-center gap-2 text-sm font-black transition-all shadow-xl shadow-red-100 active:scale-95"
                     >
-                        <Plus className="w-4 h-4" />
+                        <Plus className="w-5 h-5" />
                         <span>إضافة مدرب جديد</span>
                     </button>
                 )}
             </div>
 
-            {error && <div className="bg-red-50 text-red-600 p-4 rounded-lg border border-red-200">{error}</div>}
+            {error && <div className="bg-red-50 text-red-600 p-4 rounded-xl border-2 border-red-100 font-bold">{error}</div>}
             {success && (
-                <div className="bg-green-50 text-green-700 p-4 rounded-lg border border-green-200 flex items-center gap-2">
-                    <CheckCircle2 className="w-5 h-5" />
+                <div className="bg-green-50 text-green-700 p-4 rounded-xl border-2 border-green-100 flex items-center gap-3 font-bold animate-in fade-in">
+                    <CheckCircle2 className="w-6 h-6" />
                     {success}
                 </div>
             )}
 
             {isFormOpen && (
-                <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-                    <h2 className="text-lg font-bold mb-4">{isEditing ? "تعديل بيانات مدرب" : "إضافة مدرب جديد"}</h2>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">الاسم بالكامل</label>
+                <div className="bg-white p-8 rounded-[32px] border-2 border-slate-50 shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden relative">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-red-50/50 rounded-bl-full -z-0" />
+
+                    <h2 className="text-xl font-black text-slate-800 mb-8 border-b border-slate-50 pb-4 relative z-10">
+                        {isEditing ? "تعديل بيانات مدرب" : "إضافة مدرب جديد"}
+                    </h2>
+
+                    <form onSubmit={handleSubmit} className="space-y-8 relative z-10 text-right" dir="rtl">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="space-y-2">
+                                <label className="block text-sm font-black text-slate-500 mr-2">الاسم بالكامل <span className="text-[#E60000]">*</span></label>
                                 <input
                                     type="text"
                                     required
                                     value={formData.full_name}
                                     onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-[#E60000] outline-none"
+                                    className="w-full h-14 px-5 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] focus:bg-white outline-none font-bold text-slate-800 transition-all"
                                 />
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">الهاتف</label>
+                            <div className="space-y-2">
+                                <label className="block text-sm font-black text-slate-500 mr-2">الهاتف <span className="text-[#E60000]">*</span></label>
                                 <input
                                     type="text"
                                     required
                                     value={formData.phone}
                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-[#E60000] outline-none text-left"
+                                    className="w-full h-14 px-5 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] focus:bg-white outline-none font-bold text-slate-800 transition-all text-left"
                                     dir="ltr"
                                 />
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">الفرع الأساسي</label>
+                            <div className="space-y-2">
+                                <label className="block text-sm font-black text-slate-500 mr-2">الفرع الأساسي <span className="text-[#E60000]">*</span></label>
                                 <select
                                     required
                                     value={formData.branch_id}
-                                    onChange={(e) => setFormData({ ...formData, branch_id: e.target.value })}
-                                    className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-[#E60000] outline-none"
+                                    onChange={(e) => setFormData({ ...formData, branch_id: e.target.value, group_ids: [] })}
+                                    className="w-full h-14 px-5 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#E60000] focus:bg-white outline-none font-bold text-slate-800 transition-all"
                                 >
                                     <option value="" disabled>اختر الفرع</option>
                                     {branches.map(b => (
@@ -164,33 +211,63 @@ export default function CoachesPage() {
                             </div>
                         </div>
 
-                        {isEditing && (
-                            <div className="flex items-center gap-2">
+                        <div className="space-y-4">
+                            <label className="block text-sm font-black text-slate-800 mr-2">المجموعات المسئول عنها (المجموعات المعينة)</label>
+                            {!formData.branch_id ? (
+                                <div className="p-10 border-2 border-dashed border-slate-100 rounded-2xl text-center bg-slate-50">
+                                    <p className="text-slate-400 font-bold">يرجى اختيار الفرع أولاً لعرض المجموعات.</p>
+                                </div>
+                            ) : currentBranchGroups.length === 0 ? (
+                                <div className="p-10 border-2 border-dashed border-slate-100 rounded-2xl text-center bg-slate-50">
+                                    <p className="text-slate-400 font-bold">لا توجد مجموعات في هذا الفرع حالياً.</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 pt-2">
+                                    {currentBranchGroups.map(group => (
+                                        <button
+                                            key={group.id}
+                                            type="button"
+                                            onClick={() => handleGroupToggle(group.id)}
+                                            className={`p-3 rounded-xl border-2 text-sm font-bold transition-all text-center ${formData.group_ids.includes(group.id)
+                                                    ? "border-[#E60000] bg-red-50 text-[#E60000]"
+                                                    : "border-slate-50 bg-white text-slate-600 hover:border-slate-200"
+                                                }`}
+                                        >
+                                            {group.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-6 border-t border-slate-50">
+                            <div className="flex items-center gap-3">
                                 <input
                                     type="checkbox"
                                     id="is_active"
                                     checked={formData.is_active}
                                     onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                                    className="w-5 h-5 rounded border-slate-200 text-[#E60000] focus:ring-[#E60000]"
                                 />
-                                <label htmlFor="is_active" className="text-sm text-slate-700">المدرب نشط</label>
+                                <label htmlFor="is_active" className="text-sm font-black text-slate-600 cursor-pointer">الحالة: مدرب نشط</label>
                             </div>
-                        )}
 
-                        <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                            <button
-                                type="button"
-                                onClick={() => setIsFormOpen(false)}
-                                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-sm font-medium"
-                            >
-                                إلغاء
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={saving}
-                                className="px-6 py-2 bg-[#E60000] text-white rounded-md hover:bg-red-700 disabled:opacity-50 text-sm font-medium"
-                            >
-                                {saving ? "جاري الحفظ..." : "حفظ بيانات المدرب"}
-                            </button>
+                            <div className="flex gap-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsFormOpen(false)}
+                                    className="px-8 h-12 text-slate-400 font-black hover:text-slate-900 transition-colors"
+                                >
+                                    إلغاء
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={saving}
+                                    className="px-10 h-12 bg-[#E60000] hover:bg-black text-white rounded-xl font-black text-base transition-all disabled:opacity-50 active:scale-95 shadow-lg shadow-red-100"
+                                >
+                                    {saving ? "جاري الحفظ..." : "حفظ بيانات المدرب"}
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>

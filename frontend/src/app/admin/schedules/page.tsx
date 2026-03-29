@@ -1,3 +1,4 @@
+// REBUILD_FOR_MERGED_SCHEDULES: 2026-03-30_00:10
 "use client";
 import { useState, useEffect } from "react";
 import { Plus, Calendar as CalendarIcon, MapPin, Search, Loader2, Check, X, Users, ChevronDown } from "lucide-react";
@@ -134,11 +135,25 @@ export default function SchedulesPage() {
 
     const currentBranchGroups = groups.filter(g => g.branch_id === formData.branch_id);
 
+    // Grouping Logic for v1.7.0
+    const groupedSchedules = schedules.reduce((acc, sch) => {
+        const key = `${sch.branch?.id}-${sch.day_of_week}-${sch.start_time}-${sch.end_time}-${sch.field_name}`;
+        if (!acc[key]) {
+            acc[key] = { ...sch, groupNames: [sch.group?.name || 'unknown'], groupIds: [sch.group?.id] };
+        } else {
+            acc[key].groupNames.push(sch.group?.name || 'unknown');
+            acc[key].groupIds.push(sch.group?.id);
+        }
+        return acc;
+    }, {} as Record<string, any>);
+
+    const displaySchedules = Object.values(groupedSchedules);
+
     return (
         <div className="space-y-6 pb-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" dir="rtl">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-b border-slate-100 pb-8 mt-4">
                 <div className="text-right">
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">جدول التدريبات <span className="text-[#E60000] text-sm font-bold bg-red-50 px-2 py-1 rounded ml-2">v1.6.3</span></h1>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">جدول التدريبات <span className="text-[#E60000] text-sm font-bold bg-red-50 px-2 py-1 rounded ml-2">v1.7.1</span></h1>
                     <p className="text-slate-500 text-sm mt-3 font-medium">إدارة وتخطيط مواعيد التدريبات لجميع فروع الأكاديمية.</p>
                 </div>
 
@@ -320,11 +335,11 @@ export default function SchedulesPage() {
                             <tbody className="divide-y divide-slate-50 font-bold text-slate-700">
                                 {loading ? (
                                     <tr><td colSpan={5} className="p-32 text-center"><Loader2 className="w-10 h-10 animate-spin mx-auto text-slate-100" /></td></tr>
-                                ) : schedules.length === 0 ? (
+                                ) : displaySchedules.length === 0 ? (
                                     <tr><td colSpan={5} className="p-32 text-center text-slate-400 font-black text-lg">لا توجد مواعيد تدريب مسجلة حالياً لهذه التصفية.</td></tr>
                                 ) : (
-                                    schedules.map((item) => (
-                                        <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
+                                    displaySchedules.map((item: any, idx) => (
+                                        <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
                                             <td className="px-10 py-8 font-black text-slate-900 border-r-4 border-transparent group-hover:border-[#E60000] transition-all">
                                                 <div className="flex items-center gap-5">
                                                     <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center group-hover:bg-[#E60000] group-hover:text-white transition-all shadow-sm">
@@ -341,8 +356,10 @@ export default function SchedulesPage() {
                                             </td>
                                             <td className="px-10 py-8">
                                                 <div className="flex flex-col">
-                                                    <span className="text-xl font-black text-[#E60000] tracking-tight">{item.group?.name}</span>
-                                                    <span className="text-[10px] text-slate-300 font-black uppercase mt-1">Group ID: {item.group_id.slice(0, 8)}</span>
+                                                    <span className="text-lg font-black text-[#E60000] tracking-tight leading-relaxed">
+                                                        {item.groupNames.join(" ، ")}
+                                                    </span>
+                                                    <span className="text-[10px] text-slate-300 font-black uppercase mt-1 italic">{item.groupNames.length} مجموعات</span>
                                                 </div>
                                             </td>
                                             <td className="px-10 py-8 font-extrabold text-slate-600">{item.coach?.full_name}</td>

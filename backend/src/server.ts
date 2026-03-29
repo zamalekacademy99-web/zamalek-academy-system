@@ -1,4 +1,4 @@
-// STABLE_BUILD_TRIGGER: 1.6.4
+// REBUILD_FOR_MERGED_SCHEDULES: 2026-03-30_00:10
 // Build Version: 1.0.9 - Notification & Financial Overhaul v1.6.4
 import 'dotenv/config';
 import express from 'express';
@@ -72,13 +72,22 @@ app.use('/api/v1/admin/notifications', adminNotificationsRoutes);
 // ----------------------------------------------------------------
 // System Routes
 // ----------------------------------------------------------------
+app.get('/', (req, res) => {
+    res.json({
+        name: 'Zamalek Academy API',
+        version: '1.7.1',
+        status: 'FORCED_REBUILD_V1.7.1',
+        build_trigger: 'v1.7.1_FORCED'
+    });
+});
+
 app.get('/api/v1/health', (_req: Request, res: Response) => {
     res.status(200).json({
         status: 'success',
         message: 'Zamalek Academy API is running',
         port: String(port),
         env: process.env.NODE_ENV || 'development',
-        version: '1.2.0',
+        version: '1.7.1',
         timestamp: new Date().toISOString()
     });
 });

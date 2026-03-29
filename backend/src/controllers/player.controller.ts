@@ -117,19 +117,18 @@ export const getAllPlayers = async (req: Request, res: Response): Promise<void> 
             console.log(`[API v1.5.3] Normal Fetch: branch=${branch_id}, coach=${coach_id}`);
             if (branch_id) filter.branch_id = String(branch_id);
             if (coach_id) {
-                const coach = await prisma.coach.findUnique({
+                // Find all groups assigned to this coach
+                const coach = await (prisma.coach as any).findUnique({
                     where: { id: String(coach_id) },
                     include: { groups: true }
                 });
-                const groupIds = coach?.groups.map(g => g.id) || [];
+                const groupIds = coach?.groups.map((g: any) => g.id) || [];
 
                 if (groupIds.length > 0) {
-                    filter.OR = [
-                        { coach_id: String(coach_id) },
-                        { group_id: { in: groupIds } }
-                    ];
+                    filter.group_id = { in: groupIds };
                 } else {
-                    filter.branch_id = coach?.branch_id;
+                    // If no groups assigned, they see nothing or only direct assignments (fallback)
+                    filter.coach_id = String(coach_id);
                 }
             }
         }

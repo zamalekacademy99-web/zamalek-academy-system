@@ -98,16 +98,23 @@ export const createCoach = async (req: Request, res: Response): Promise<void> =>
 export const updateCoach = async (req: Request, res: Response): Promise<void> => {
     try {
         const { id } = req.params;
-        const { full_name, phone, branch_id, is_active, permissions } = req.body;
+        const { full_name, phone, branch_id, is_active, permissions, group_ids } = req.body;
 
         const updateData: any = { full_name, phone, branch_id, is_active };
         if (permissions !== undefined) {
             updateData.permissions = permissions;
         }
 
+        if (group_ids !== undefined) {
+            updateData.groups = {
+                set: group_ids.map((id: string) => ({ id: String(id) }))
+            };
+        }
+
         const updatedCoach = await prisma.coach.update({
             where: { id: String(id) },
-            data: updateData
+            data: updateData,
+            include: { groups: true }
         });
 
         res.status(200).json({ status: 'success', data: updatedCoach });
