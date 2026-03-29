@@ -157,35 +157,53 @@ export default function AdminCoachProfilePage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
-                {/* ── User Credentials Card ─────────────────────────── */}
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-3">
-                    <div className="flex items-center gap-2 mb-1">
-                        <Shield className="w-4 h-4 text-[#E60000]" />
-                        <h3 className="font-black text-slate-800">بيانات الدخول</h3>
-                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold ms-auto">للإدارة فقط</span>
+                {/* ── User Credentials Card (STRICT VIEW) ─────────────────────────── */}
+                <div className="bg-white rounded-xl border-2 border-slate-200 shadow-md p-6 space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                        <Shield className="w-5 h-5 text-[#E60000]" />
+                        <h3 className="font-black text-lg text-slate-800">بيانات الدخول (Credentials)</h3>
+                        <span className="text-xs bg-[#E60000]/10 text-[#E60000] px-3 py-1 rounded-full font-black ms-auto">ADMIN ONLY</span>
                     </div>
+
                     {coach.user ? (
-                        <>
-                            <CopyCard label="البريد الإلكتروني" value={coach.user.email} />
-                            <CopyCard label="كلمة المرور" value={coach.user.plain_password || coach.phone || "—"} />
-                            <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-lg p-3 leading-relaxed">
-                                ⚠️ كلمة المرور الافتراضية هي رقم الهاتف. هذه البيانات مرئية للإدارة فقط.
+                        <div className="space-y-3">
+                            <CopyCard label="البريد الإلكتروني للإدارة" value={coach.user.email} />
+                            <CopyCard label="كلمة المرور (Phone No.)" value={coach.user.plain_password || coach.phone || "—"} />
+                            <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-xl p-4 leading-relaxed font-semibold">
+                                💡 ملاحظة: كلمة المرور الافتراضية هي رقم الهاتف المسجل للمدرب. يمكن للمدرب تغييرها لاحقاً.
                             </div>
-                        </>
+                        </div>
                     ) : (
-                        <div className="py-6 text-center space-y-4">
-                            <p className="text-slate-400 text-sm">لا يوجد حساب مرتبط بهذا المدرب بعد.</p>
+                        <div className="py-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-300 space-y-5">
+                            <div className="space-y-2">
+                                <p className="text-slate-900 font-bold">لا يوجد حساب مرتبط حالياً</p>
+                                <p className="text-slate-500 text-xs max-w-[250px] mx-auto">اضغط على الزر أدناه لإنشاء حساب دخول للمدرب باستخدام رقم هاتفه ككلمة مرور.</p>
+                            </div>
                             <button
-                                onClick={handleCreateAccount}
+                                onClick={async () => {
+                                    if (!id) return;
+                                    setCreatingAccount(true);
+                                    try {
+                                        // Force call to the NEW dedicated endpoint
+                                        await fetchApi(`/coaches/${id}/create-account`, { method: "POST" });
+                                        showToast("تم إنشاء الحساب بنجاح! 🚀");
+                                        load();
+                                    } catch (err: any) {
+                                        showToast("فشل: " + err.message, "error");
+                                    } finally {
+                                        setCreatingAccount(false);
+                                    }
+                                }}
                                 disabled={creatingAccount}
-                                className="inline-flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-black hover:bg-slate-800 transition disabled:opacity-50"
+                                className="inline-flex items-center gap-2 bg-[#E60000] text-white px-6 py-3 rounded-xl text-sm font-black hover:bg-red-700 transition shadow-lg hover:shadow-red-500/20 disabled:opacity-50"
                             >
                                 <Shield className="w-4 h-4" />
-                                {creatingAccount ? "جاري إنشاء الحساب..." : "إنشاء حساب دخول للمدرب"}
+                                {creatingAccount ? "جاري الإنشاء..." : "إنشاء حساب دخول الآن (Manual)"}
                             </button>
                         </div>
                     )}
                 </div>
+
 
                 {/* ── Permissions Manager ───────────────────────────── */}
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">

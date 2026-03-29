@@ -1,3 +1,4 @@
+/** EMERGENCY REBUILD: 2026-03-29 05:58:01 (Strict Parity Fix) **/
 "use client";
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';

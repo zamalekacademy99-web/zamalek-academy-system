@@ -1,16 +1,8 @@
-/**
- * API Utility for Zamalek Academy Frontend
- * Reads NEXT_PUBLIC_API_URL from environment — set this in Vercel to your Railway URL.
- *
- * Expected format:  https://your-app.railway.app/api/v1
- * Fallback (local): http://localhost:8000/api/v1
- */
+import { API_CONFIG } from "./api-config";
 
-// Remove any trailing slash from the base URL
-const rawBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1').replace(/\/+$/, '');
+// Force use of hardcoded production URL for stability
+const API_BASE_URL = API_CONFIG.BASE_URL;
 
-// If someone set the var to just the host (e.g. https://xyz.railway.app), append /api/v1
-const API_BASE_URL = rawBase.endsWith('/api/v1') ? rawBase : `${rawBase}/api/v1`;
 
 export async function fetchApi(endpoint: string, options: RequestInit = {}) {
     // Normalize endpoint — ensure exactly one leading slash, strip accidental /api/v1 prefix

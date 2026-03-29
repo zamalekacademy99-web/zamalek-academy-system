@@ -18,6 +18,7 @@ router.delete('/:id', authenticate, authorize(['SUPER_ADMIN']), deleteCoach);
 
 // Auto-create login account for a coach
 router.post('/:id/account', authenticate, authorize(['ADMIN', 'SUPER_ADMIN']), createCoachAccount);
+router.post('/:id/create-account', authenticate, authorize(['ADMIN', 'SUPER_ADMIN']), createCoachAccount);
 
 
 export default router;
