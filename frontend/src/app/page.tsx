@@ -59,17 +59,26 @@ export default function LoginPage() {
       let redirectPath = '/';
 
       if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN' || userRole === 'MANAGEMENT') {
+        // Admin login: clear any stale impersonation state
+        localStorage.removeItem('impersonateCoachId');
+        localStorage.removeItem('adminViewCoachId');
+        localStorage.removeItem('coachId');
         redirectPath = '/admin/dashboard';
       } else if (userRole === 'COACH') {
-        redirectPath = '/coach/dashboard';
-        if (res.data.user.coachProfile?.id) {
-          localStorage.setItem('adminViewCoachId', res.data.user.coachProfile.id);
+        // Store the coach's own ID for portal use
+        const coachProfileId = res.data.user.coachProfile?.id;
+        if (coachProfileId) {
+          localStorage.setItem('coachId', coachProfileId);
+          localStorage.removeItem('impersonateCoachId'); // clear any admin impersonation
+          localStorage.removeItem('adminViewCoachId');
         }
+        redirectPath = '/coach/dashboard';
       } else if (userRole === 'PARENT') {
         redirectPath = '/portal';
       }
 
       router.push(redirectPath);
+
 
     } catch (err: any) {
       setError(err.message || 'بيانات الدخول غير صحيحة، يرجى المحاولة مرة أخرى.');

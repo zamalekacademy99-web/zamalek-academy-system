@@ -238,6 +238,62 @@ export default function PortalDashboard() {
                 </div>
             )}
 
+            {/* Player Progress — Latest Evaluations */}
+            {children.some((c: any) => c.evaluations?.length > 0) && (
+                <div>
+                    <h3 className="text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
+                        ⭐ تقدم الأداء
+                    </h3>
+                    <div className="space-y-4">
+                        {children.map((child: any) => {
+                            const latestEval = child.evaluations?.[0];
+                            if (!latestEval) return null;
+                            const avg = Math.round((latestEval.commitment_score + latestEval.discipline_score + latestEval.technical_score + latestEval.fitness_score) / 4);
+                            const scoreFields = [
+                                { label: "الالتزام", val: latestEval.commitment_score, color: "bg-blue-500" },
+                                { label: "الانضباط", val: latestEval.discipline_score, color: "bg-purple-500" },
+                                { label: "التقنية", val: latestEval.technical_score, color: "bg-yellow-500" },
+                                { label: "اللياقة", val: latestEval.fitness_score, color: "bg-green-500" },
+                            ];
+                            return (
+                                <div key={child.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div>
+                                            <p className="font-black text-slate-900">{child.first_name}</p>
+                                            <p className="text-xs text-slate-500">
+                                                آخر تقييم: {new Date(latestEval.date).toLocaleDateString('ar-EG')} • المدرب: {latestEval.coach?.full_name}
+                                            </p>
+                                        </div>
+                                        <div className="text-center bg-[#E60000]/5 rounded-xl px-4 py-2">
+                                            <p className="text-2xl font-black text-[#E60000]">{avg}</p>
+                                            <p className="text-[10px] text-slate-500 font-semibold">/ 10</p>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {scoreFields.map(sf => (
+                                            <div key={sf.label}>
+                                                <div className="flex justify-between text-xs text-slate-500 mb-1 font-semibold">
+                                                    <span>{sf.label}</span>
+                                                    <span>{sf.val}/10</span>
+                                                </div>
+                                                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                                                    <div className={`h-full ${sf.color} rounded-full transition-all`} style={{ width: `${sf.val * 10}%` }} />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {latestEval.notes && (
+                                        <div className="mt-3 bg-slate-50 rounded-xl p-3 text-xs text-slate-600 leading-relaxed">
+                                            💬 {latestEval.notes}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 }

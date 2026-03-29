@@ -27,9 +27,15 @@ export const getDashboard = async (req: Request, res: Response): Promise<void> =
                 },
                 coach: true,
                 attendance: { orderBy: { date: 'desc' }, take: 5 },
-                payments: { orderBy: { date: 'desc' }, take: 1 }
+                payments: { orderBy: { date: 'desc' }, take: 1 },
+                evaluations: {
+                    orderBy: { date: 'desc' },
+                    take: 3,
+                    include: { coach: { select: { full_name: true } } }
+                }
             }
         });
+
 
         const unreadNotifications = await prisma.notification.count({
             where: { user_id: (req as any).user.id, is_read: false }

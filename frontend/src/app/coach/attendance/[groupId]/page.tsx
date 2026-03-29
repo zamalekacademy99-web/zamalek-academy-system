@@ -69,7 +69,9 @@ function AttendanceContent() {
             });
 
             setSuccess(true);
+            router.refresh(); // real-time sync
             setTimeout(() => router.push(`/coach/dashboard${coachId ? `?coachId=${coachId}` : ""}`), 2000);
+
         } catch (err: any) {
             setError(err.message || 'حدث خطأ أثناء الحفظ');
         } finally {

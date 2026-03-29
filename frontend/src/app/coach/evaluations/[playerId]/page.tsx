@@ -1,8 +1,8 @@
 "use client";
 import { useState, useEffect, Suspense } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useCoachId } from "@/hooks/useCoachId";
-import { Star, ShieldAlert, Loader2, Check } from "lucide-react";
+import { Star, ShieldAlert, Loader2 } from "lucide-react";
 import { fetchApi } from "@/lib/api";
 
 const CRITERIA = [
@@ -15,7 +15,7 @@ const CRITERIA = [
 function StarRating({ value, onChange }: { value: number; onChange: (v: number) => void }) {
     const [hover, setHover] = useState(0);
     return (
-        <div className="flex gap-1.5 justify-center">
+        <div className="flex gap-1.5 justify-center flex-wrap">
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
                 <button
                     key={i}
@@ -25,7 +25,7 @@ function StarRating({ value, onChange }: { value: number; onChange: (v: number) 
                     onClick={() => onChange(i)}
                     className={`transition-all active:scale-95 ${(hover || value) >= i ? 'text-yellow-400 scale-110' : 'text-slate-200'}`}
                 >
-                    <Star className="w-8 h-8 fill-current" />
+                    <Star className="w-7 h-7 fill-current" />
                 </button>
             ))}
         </div>
@@ -36,7 +36,7 @@ function EvaluateContent() {
     const params = useParams();
     const router = useRouter();
     const coachId = useCoachId();
-    const id = params?.id as string;
+    const playerId = params?.playerId as string;
 
     const [player, setPlayer] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -53,15 +53,18 @@ function EvaluateContent() {
     const [notes, setNotes] = useState("");
 
     useEffect(() => {
-        if (!id) return;
+        if (!playerId) return;
         setLoading(true);
         setError(null);
-        fetchApi(`/coach/players/${id}`)
-            .then(res => setPlayer(res.data))
-            .catch(err => setError(err.message))
+        // Use the coach portal player endpoint which allows coach + admin access
+        fetchApi(`/coach/players/${playerId}`)
+            .then(res => {
+                if (res.success) setPlayer(res.data);
+                else setError(res.message || "لم يتم العثور على اللاعب");
+            })
+            .catch(err => setError(err.message || "تعذر تحميل بيانات اللاعب"))
             .finally(() => setLoading(false));
-    }, [id]);
-
+    }, [playerId]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -71,16 +74,17 @@ function EvaluateContent() {
             await fetchApi('/coach/evaluate', {
                 method: 'POST',
                 body: JSON.stringify({
-                    player_id: id,
+                    player_id: playerId,
                     coach_id: coachId,
-
                     date: new Date().toISOString().split('T')[0],
                     ...scores,
                     notes
                 })
             });
             setSuccess(true);
-            setTimeout(() => router.push(`/coach/dashboard${coachId ? `?coachId=${coachId}` : ""}`), 2000);
+            // Real-time sync: refresh and redirect after 2s
+            router.refresh();
+            setTimeout(() => router.push(`/coach/evaluations/${coachId ? `?coachId=${coachId}` : ""}`), 2000);
         } catch (err: any) {
             setError(err.message || 'حدث خطأ أثناء الإرسال');
         } finally {
@@ -95,9 +99,17 @@ function EvaluateContent() {
         </div>
     );
 
-    if (!player) return (
-        <div className="p-12 text-center text-red-600 font-bold bg-red-50 rounded-2xl border-2 border-red-100">
-            ⚠️ تعذر العثور على اللاعب.
+    if (error || !player) return (
+        <div className="p-12 text-center bg-red-50 rounded-2xl border-2 border-red-100 space-y-3">
+            <p className="text-2xl">⚠️</p>
+            <p className="text-red-700 font-bold text-lg">تعذر تحميل بيانات اللاعب</p>
+            <p className="text-red-500 text-sm">{error || "تأكد من صحة المعرّف أو أعد المحاولة"}</p>
+            <button
+                onClick={() => router.back()}
+                className="mt-4 inline-flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold"
+            >
+                ← رجوع
+            </button>
         </div>
     );
 
@@ -105,7 +117,7 @@ function EvaluateContent() {
 
     return (
         <div className="max-w-2xl mx-auto space-y-6">
-            {/* Player Header Card */}
+            {/* Player Header */}
             <div className="bg-gradient-to-br from-[#E60000] to-red-800 text-white rounded-3xl p-8 flex items-center gap-6 shadow-xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-3xl" />
                 <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center text-4xl font-black shadow-inner">
@@ -113,7 +125,14 @@ function EvaluateContent() {
                 </div>
                 <div className="flex-1">
                     <h1 className="text-3xl font-black tracking-tight">{player.first_name} {player.last_name}</h1>
-                    <p className="text-red-100 text-sm mt-1 font-bold opacity-80">{player.group?.name} • {player.branch?.name}</p>
+                    <p className="text-red-100 text-sm mt-1 font-bold opacity-80">
+                        {player.group?.name} • {player.branch?.name}
+                    </p>
+                    {player.evaluations?.length > 0 && (
+                        <p className="text-red-200 text-xs mt-1">
+                            آخر تقييم: {new Date(player.evaluations[0].date).toLocaleDateString('ar-EG')}
+                        </p>
+                    )}
                 </div>
                 <div className="text-center bg-white/10 rounded-2xl p-4 min-w-[80px]">
                     <div className="text-4xl font-black">{avgScore}</div>
@@ -129,13 +148,13 @@ function EvaluateContent() {
             )}
 
             {error && (
-                <div className="bg-red-50 text-red-700 p-5 rounded-2xl border-2 border-red-100 font-bold animate-shake">
+                <div className="bg-red-50 text-red-700 p-5 rounded-2xl border-2 border-red-100 font-bold">
                     ⚠️ {error}
                 </div>
             )}
 
             {success && (
-                <div className="bg-green-600 text-white p-5 rounded-2xl shadow-lg shadow-green-600/20 font-black animate-bounce-in flex items-center justify-center gap-2">
+                <div className="bg-green-600 text-white p-5 rounded-2xl shadow-lg font-black flex items-center justify-center gap-2">
                     ✅ تم إرسال التقييم بنجاح! جاري العودة...
                 </div>
             )}
@@ -145,7 +164,9 @@ function EvaluateContent() {
                     <div key={c.key} className="p-6 space-y-4 hover:bg-slate-50/50 transition-colors">
                         <div className="flex items-center justify-between">
                             <label className="font-black text-slate-800 text-base">{c.label}</label>
-                            <span className="text-xl font-black text-[#E60000] bg-[#E60000]/5 px-3 py-1 rounded-lg">{(scores as any)[c.key]}/10</span>
+                            <span className="text-xl font-black text-[#E60000] bg-[#E60000]/5 px-3 py-1 rounded-lg">
+                                {(scores as any)[c.key]}/10
+                            </span>
                         </div>
                         <StarRating
                             value={(scores as any)[c.key]}
@@ -160,7 +181,7 @@ function EvaluateContent() {
                         rows={4}
                         value={notes}
                         onChange={e => setNotes(e.target.value)}
-                        placeholder="اكتب ملاحظاتك عن أداء اللاعب اليوم ليركبها ولي الأمر..."
+                        placeholder="اكتب ملاحظاتك عن أداء اللاعب اليوم..."
                         className="w-full border-2 border-slate-100 bg-slate-50 rounded-2xl p-4 text-sm font-semibold focus:ring-2 focus:ring-[#E60000] focus:bg-white focus:border-[#E60000] outline-none transition-all resize-none"
                     />
                 </div>
@@ -168,13 +189,35 @@ function EvaluateContent() {
                 <div className="p-6 bg-slate-50 flex justify-end">
                     <button
                         type="submit"
-                        disabled={saving}
+                        disabled={saving || success}
                         className="bg-[#E60000] text-white px-12 py-4 rounded-2xl font-black text-lg hover:bg-red-700 transition shadow-xl hover:shadow-red-500/20 active:scale-95 disabled:opacity-50"
                     >
                         {saving ? 'جاري الإرسال...' : 'حفظ وإرسال التقييم 🔥'}
                     </button>
                 </div>
             </form>
+
+            {/* Previous Evaluations */}
+            {player.evaluations?.length > 0 && (
+                <div className="bg-white rounded-2xl border border-slate-200 p-5">
+                    <h3 className="font-black text-slate-800 mb-4">التقييمات السابقة</h3>
+                    <div className="space-y-3">
+                        {player.evaluations.slice(0, 5).map((ev: any) => (
+                            <div key={ev.id} className="bg-slate-50 rounded-xl p-4">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-xs text-slate-500 font-semibold">
+                                        {new Date(ev.date).toLocaleDateString('ar-EG')} • {ev.coach?.full_name}
+                                    </span>
+                                    <span className="text-sm font-black text-[#E60000]">
+                                        متوسط: {Math.round((ev.commitment_score + ev.discipline_score + ev.technical_score + ev.fitness_score) / 4)}/10
+                                    </span>
+                                </div>
+                                {ev.notes && <p className="text-xs text-slate-600">{ev.notes}</p>}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -146,12 +146,18 @@ export default function AdminCoachProfilePage() {
                     </span>
                     {/* Open Coach Portal Button with coachId for impersonation */}
                     <button
-                        onClick={() => router.push(`/coach/dashboard?coachId=${coach.id}`)}
+                        onClick={() => {
+                            // Set impersonation keys so the coach portal hook resolves this coach's ID
+                            localStorage.setItem('impersonateCoachId', coach.id);
+                            localStorage.setItem('adminViewCoachId', coach.id);
+                            router.push(`/coach/dashboard?coachId=${coach.id}`);
+                        }}
                         className="flex items-center gap-1.5 bg-[#E60000] text-white text-xs font-bold px-3 py-2 rounded-xl hover:bg-red-700 transition"
                     >
                         <ExternalLink className="w-3.5 h-3.5" />
                         بوابة المدرب
                     </button>
+
                 </div>
             </div>
 
