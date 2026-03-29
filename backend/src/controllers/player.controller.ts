@@ -24,8 +24,8 @@ export const registerPlayer = async (req: Request, res: Response): Promise<void>
             where: {
                 OR: [
                     { phone: parent_phone },
-                    parent_email ? { user: { email: parent_email } } : {}
-                ].filter(condition => Object.keys(condition).length > 0)
+                    parent_email ? { user: { email: parent_email } } : { id: '00000000-0000-0000-0000-000000000000' } // fake uuid if no email to avoid empty OR
+                ]
             },
             include: { user: true }
         });
@@ -34,7 +34,7 @@ export const registerPlayer = async (req: Request, res: Response): Promise<void>
 
         if (!parent) {
             // Create new User and Parent profile
-            const defaultPassword = await bcrypt.hash(parent_phone, 10); // temporary password = phone
+            const defaultPassword = await bcrypt.hash(parent_phone, 10);
             const emailToUse = parent_email || `${parent_phone}@zamalek-academy.local`;
 
             const newUser = await prisma.user.create({
@@ -42,7 +42,7 @@ export const registerPlayer = async (req: Request, res: Response): Promise<void>
                     name: parent_name || 'Parent User',
                     email: emailToUse,
                     password_hash: defaultPassword,
-                    plain_password: parent_phone, // store plain text for admin reference
+                    plain_password: parent_phone,
                     role: Role.PARENT
                 }
             });
@@ -50,7 +50,8 @@ export const registerPlayer = async (req: Request, res: Response): Promise<void>
             parent = await prisma.parent.create({
                 data: {
                     user_id: newUser.id,
-                    phone: parent_phone
+                    phone: parent_phone,
+                    balance: 0 // Initialize balance to 0
                 },
                 include: { user: true }
             });
@@ -63,23 +64,27 @@ export const registerPlayer = async (req: Request, res: Response): Promise<void>
                 last_name: player_last_name || '',
                 dob: new Date(dob || new Date()),
                 parent_id: parent.id,
-                branch_id,
-                group_id,
-                coach_id,
+                branch_id: String(branch_id),
+                group_id: String(group_id),
+                coach_id: String(coach_id),
                 status: PlayerStatus.ACTIVE,
                 subscription_start_date: new Date()
             }
         });
 
-        // Step 3: Record Initial Payment
-        const adminId = (req as any).user.id; // From auth middleware
+        // Step 3: Record Initial Payment (Corrected for v1.6.1)
+        const adminId = (req as any).user.id;
+        const now = new Date();
         await prisma.payment.create({
             data: {
                 player_id: newPlayer.id,
                 amount: parseFloat(payment_amount),
                 method: payment_method as PaymentMethod,
-                reference_no,
-                date: new Date(),
+                category: 'MONTHLY_FEE', // Mandatory
+                period_month: now.getMonth() + 1, // Mandatory
+                period_year: now.getFullYear(),   // Mandatory
+                reference_no: reference_no || `REG-${Date.now()}`,
+                date: now,
                 recorded_by: adminId,
                 notes: 'Initial Registration Payment'
             }
@@ -93,9 +98,9 @@ export const registerPlayer = async (req: Request, res: Response): Promise<void>
             data: { player_id: newPlayer.id, parent_id: parent.id, is_new_parent: isNewParent }
         });
 
-    } catch (error) {
-        console.error('Error during player registration:', error);
-        res.status(500).json({ status: 'error', message: 'Internal server error' });
+    } catch (error: any) {
+        console.error('REGISTRATION ERROR:', error);
+        res.status(500).json({ status: 'error', message: error.message || 'Internal server error' });
     }
 };
 
