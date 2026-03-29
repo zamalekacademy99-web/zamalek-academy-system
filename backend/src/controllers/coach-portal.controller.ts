@@ -4,22 +4,43 @@ import prisma from '../db'; // use shared instance, not new PrismaClient()
 // GET /api/v1/coach/dashboard
 export const getCoachDashboard = async (req: Request, res: Response): Promise<void> => {
     try {
-        const userId = (req as any).user?.id;
-        if (!userId) { res.status(401).json({ success: false, message: 'Unauthorized' }); return; }
+        let userId = (req as any).user?.id;
+        const role = (req as any).user?.role;
+        const impersonateId = req.query.coachId as string;
 
-        const coach = await (prisma as any).coach.findUnique({
-            where: { user_id: userId },
-            include: {
-                groups: {
-                    include: {
-                        players: { select: { id: true, first_name: true, last_name: true } },
-                        schedules: { include: { branch: true } }
-                    }
-                },
-                schedules: { include: { branch: true, group: true } },
-                branch: true
-            }
-        });
+        let coach;
+        if (impersonateId && (role === 'ADMIN' || role === 'SUPER_ADMIN')) {
+            // Admin is viewing a specific coach portal
+            coach = await (prisma as any).coach.findUnique({
+                where: { id: impersonateId },
+                include: {
+                    groups: {
+                        include: {
+                            players: { select: { id: true, first_name: true, last_name: true } },
+                            schedules: { include: { branch: true } }
+                        }
+                    },
+                    schedules: { include: { branch: true, group: true } },
+                    branch: true
+                }
+            });
+        } else {
+            // Regular coach view
+            if (!userId) { res.status(401).json({ success: false, message: 'Unauthorized' }); return; }
+            coach = await (prisma as any).coach.findUnique({
+                where: { user_id: userId },
+                include: {
+                    groups: {
+                        include: {
+                            players: { select: { id: true, first_name: true, last_name: true } },
+                            schedules: { include: { branch: true } }
+                        }
+                    },
+                    schedules: { include: { branch: true, group: true } },
+                    branch: true
+                }
+            });
+        }
 
         if (!coach) { res.status(404).json({ success: false, message: 'Coach profile not found.' }); return; }
 
@@ -63,9 +84,16 @@ export const getGroupPlayers = async (req: Request, res: Response): Promise<void
 export const submitAttendance = async (req: Request, res: Response): Promise<void> => {
     try {
         const userId = (req as any).user?.id;
-        const { schedule_id, date, records } = req.body;
+        const role = (req as any).user?.role;
+        const { schedule_id, date, records, coach_id } = req.body;
 
-        const coach = await prisma.coach.findUnique({ where: { user_id: String(userId) } });
+        let coach;
+        if (coach_id && (role === 'ADMIN' || role === 'SUPER_ADMIN')) {
+            coach = await (prisma as any).coach.findUnique({ where: { id: String(coach_id) } });
+        } else {
+            coach = await (prisma as any).coach.findUnique({ where: { user_id: String(userId) } });
+        }
+
         if (!coach) { res.status(404).json({ success: false, message: 'Coach not found.' }); return; }
 
         const dateObj = new Date(date);
@@ -101,9 +129,16 @@ export const submitAttendance = async (req: Request, res: Response): Promise<voi
 export const submitEvaluation = async (req: Request, res: Response): Promise<void> => {
     try {
         const userId = (req as any).user?.id;
-        const { player_id, date, commitment_score, discipline_score, technical_score, fitness_score, notes } = req.body;
+        const role = (req as any).user?.role;
+        const { player_id, date, commitment_score, discipline_score, technical_score, fitness_score, notes, coach_id } = req.body;
 
-        const coach = await prisma.coach.findUnique({ where: { user_id: String(userId) } });
+        let coach;
+        if (coach_id && (role === 'ADMIN' || role === 'SUPER_ADMIN')) {
+            coach = await (prisma as any).coach.findUnique({ where: { id: String(coach_id) } });
+        } else {
+            coach = await (prisma as any).coach.findUnique({ where: { user_id: String(userId) } });
+        }
+
         if (!coach) { res.status(404).json({ success: false, message: 'Coach not found.' }); return; }
 
         const evaluation = await prisma.evaluation.create({
@@ -129,7 +164,7 @@ export const submitEvaluation = async (req: Request, res: Response): Promise<voi
 export const getPlayerForEval = async (req: Request, res: Response): Promise<void> => {
     try {
         const playerId = String(req.params.playerId);
-        const player = await prisma.player.findUnique({
+        const player = await (prisma as any).player.findUnique({
             where: { id: playerId },
             include: {
                 group: true,

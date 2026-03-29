@@ -1,9 +1,10 @@
+// Force Re-deployment: v1.0.1 (Phase 9 Finalized)
 import type { Metadata } from "next";
 import { Cairo, Tajawal, Geist } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 
 const tajawal = Tajawal({
   subsets: ["arabic", "latin"],

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { getAllPlayers, getPlayerById, registerPlayer, updatePlayer, deletePlayer } from '../controllers/player.controller';
-import { authenticate } from '../middlewares/auth.middleware';
+import { authenticate, authorize } from '../middlewares/auth.middleware';
 import type { Request, Response } from 'express';
 
 const router = Router();
@@ -10,10 +10,10 @@ router.get('/test-me', (_req: Request, res: Response) => {
     res.json({ success: true, message: 'players route is alive', route: 'GET /api/v1/players/test-me' });
 });
 
-router.get('/', authenticate, getAllPlayers);
-router.post('/register', authenticate, registerPlayer);
-router.get('/:id', authenticate, getPlayerById);
-router.put('/:id', authenticate, updatePlayer);
-router.delete('/:id', authenticate, deletePlayer);
+router.get('/', authenticate, authorize(['ADMIN', 'SUPER_ADMIN']), getAllPlayers);
+router.post('/register', authenticate, authorize(['ADMIN', 'SUPER_ADMIN']), registerPlayer);
+router.get('/:id', authenticate, authorize(['ADMIN', 'SUPER_ADMIN']), getPlayerById);
+router.put('/:id', authenticate, authorize(['ADMIN', 'SUPER_ADMIN']), updatePlayer);
+router.delete('/:id', authenticate, authorize(['ADMIN', 'SUPER_ADMIN']), deletePlayer);
 
 export default router;

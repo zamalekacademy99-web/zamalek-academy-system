@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import bcrypt from 'bcrypt';
 
 import prisma from '../db';
 
@@ -106,5 +107,52 @@ export const deleteCoach = async (req: Request, res: Response): Promise<void> =>
     } catch (error) {
         console.error('Error deleting coach:', error);
         res.status(500).json({ status: 'error', message: 'Internal server error' });
+    }
+};
+export const createCoachAccount = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const coach = await prisma.coach.findUnique({
+            where: { id: String(id) },
+            include: { user: true }
+        });
+
+        if (!coach) {
+            res.status(404).json({ status: 'error', message: 'Coach not found' });
+            return;
+        }
+
+        if (coach.user_id) {
+            res.status(400).json({ status: 'error', message: 'Coach already has a user account' });
+            return;
+        }
+
+        // Generate email: full_name.random@zamalek-academy.local
+        const cleanName = coach.full_name.toLowerCase().replace(/\s+/g, '.');
+        const shortId = Math.random().toString(36).substring(2, 5);
+        const email = `${cleanName}.${shortId}@zamalek-academy.local`;
+        const password = coach.phone; // Use phone as plain_password
+        const passwordHash = await bcrypt.hash(password, 10);
+
+        const newUser = await prisma.user.create({
+            data: {
+                email,
+                password_hash: passwordHash,
+                plain_password: password,
+                name: coach.full_name,
+                role: 'COACH',
+            }
+        });
+
+        const updatedCoach = await prisma.coach.update({
+            where: { id: coach.id },
+            data: { user_id: newUser.id },
+            include: { user: true }
+        });
+
+        res.status(201).json({ status: 'success', message: 'Account created successfully', data: updatedCoach });
+    } catch (error: any) {
+        console.error('Error creating coach account:', error);
+        res.status(500).json({ status: 'error', message: error.message || 'Internal server error' });
     }
 };

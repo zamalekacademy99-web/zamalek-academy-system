@@ -55,6 +55,7 @@ export default function AdminCoachProfilePage() {
 
     const [perms, setPerms] = useState(DEFAULT_PERMS);
     const [savingPerms, setSavingPerms] = useState(false);
+    const [creatingAccount, setCreatingAccount] = useState(false);
 
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
@@ -89,6 +90,20 @@ export default function AdminCoachProfilePage() {
             showToast("فشل حفظ الصلاحيات: " + err.message, "error");
         } finally {
             setSavingPerms(false);
+        }
+    };
+
+    const handleCreateAccount = async () => {
+        if (!id) return;
+        setCreatingAccount(true);
+        try {
+            await fetchApi(`/coaches/${id}/account`, { method: "POST" });
+            showToast("تم إنشاء حساب الدخول بنجاح! 🎉");
+            load();
+        } catch (err: any) {
+            showToast("فشل إنشاء الحساب: " + err.message, "error");
+        } finally {
+            setCreatingAccount(false);
         }
     };
 
@@ -129,9 +144,9 @@ export default function AdminCoachProfilePage() {
                     <span className={`px-3 py-1.5 rounded-full text-xs font-bold text-center ${coach.is_active ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
                         {coach.is_active ? "🟢 نشط" : "🔴 موقوف"}
                     </span>
-                    {/* Open Coach Portal Button */}
+                    {/* Open Coach Portal Button with coachId for impersonation */}
                     <button
-                        onClick={() => router.push("/coach/attendance")}
+                        onClick={() => router.push(`/coach/dashboard?coachId=${coach.id}`)}
                         className="flex items-center gap-1.5 bg-[#E60000] text-white text-xs font-bold px-3 py-2 rounded-xl hover:bg-red-700 transition"
                     >
                         <ExternalLink className="w-3.5 h-3.5" />
@@ -158,8 +173,16 @@ export default function AdminCoachProfilePage() {
                             </div>
                         </>
                     ) : (
-                        <div className="py-6 text-center text-slate-400 text-sm">
-                            لا يوجد حساب مرتبط بهذا المدرب بعد.
+                        <div className="py-6 text-center space-y-4">
+                            <p className="text-slate-400 text-sm">لا يوجد حساب مرتبط بهذا المدرب بعد.</p>
+                            <button
+                                onClick={handleCreateAccount}
+                                disabled={creatingAccount}
+                                className="inline-flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-black hover:bg-slate-800 transition disabled:opacity-50"
+                            >
+                                <Shield className="w-4 h-4" />
+                                {creatingAccount ? "جاري إنشاء الحساب..." : "إنشاء حساب دخول للمدرب"}
+                            </button>
                         </div>
                     )}
                 </div>

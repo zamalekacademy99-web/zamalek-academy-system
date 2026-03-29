@@ -20,6 +20,7 @@ export default function AttendancePage() {
 
     const groupId = params?.groupId as string;
     const scheduleId = search?.get('schedule') || '';
+    const coachId = search?.get('coachId');
 
     const [players, setPlayers] = useState<Player[]>([]);
     const [records, setRecords] = useState<Record<string, AttStatus>>({});
@@ -60,10 +61,12 @@ export default function AttendancePage() {
                 method: 'POST',
                 body: JSON.stringify({
                     schedule_id: scheduleId,
+                    coach_id: coachId, // Added for admin impersonation
                     date: new Date().toISOString().split('T')[0],
                     records: recordsList
                 })
             });
+
             setSuccess(true);
             setTimeout(() => router.push('/coach/dashboard'), 2000);
         } catch (err: any) {
@@ -81,6 +84,13 @@ export default function AttendancePage() {
                 <h1 className="text-2xl font-bold text-slate-900">تسجيل الحضور</h1>
                 <p className="text-slate-500 text-sm mt-1">حدد حالة كل لاعب ثم اضغط "حفظ الحضور"</p>
             </div>
+
+            {coachId && (
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-bold shadow-sm">
+                    تحذير: أنت تسجل الحضور نيابة عن المدرب (كـ Admin).
+                </div>
+            )}
+
 
             {error && <div className="bg-red-50 text-red-600 p-4 rounded-lg border border-red-200">{error}</div>}
             {success && (

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { Star } from "lucide-react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { Star, ShieldAlert } from "lucide-react";
 import { fetchApi } from "@/lib/api";
 
 const CRITERIA = [
@@ -33,8 +33,10 @@ function StarRating({ value, onChange }: { value: number; onChange: (v: number) 
 
 export default function EvaluatePage() {
     const params = useParams();
+    const searchParams = useSearchParams();
     const router = useRouter();
     const studentId = params?.studentId as string;
+    const coachId = searchParams.get("coachId");
 
     const [player, setPlayer] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -67,13 +69,14 @@ export default function EvaluatePage() {
                 method: 'POST',
                 body: JSON.stringify({
                     player_id: studentId,
+                    coach_id: coachId, // Added for admin impersonation
                     date: new Date().toISOString().split('T')[0],
                     ...scores,
                     notes
                 })
             });
             setSuccess(true);
-            setTimeout(() => router.push('/coach/dashboard'), 2000);
+            setTimeout(() => router.push(`/coach/dashboard${coachId ? `?coachId=${coachId}` : ""}`), 2000);
         } catch (err: any) {
             setError(err.message || 'حدث خطأ أثناء الإرسال');
         } finally {
@@ -84,14 +87,14 @@ export default function EvaluatePage() {
     if (loading) return <div className="p-8 text-center text-slate-500">جاري تحميل بيانات اللاعب...</div>;
     if (!player) return <div className="p-8 text-center text-red-500">لم يتم العثور على اللاعب.</div>;
 
-    const avgScore = Math.round(Object.values(scores).reduce((a, b) => a + b, 0) / 4);
+    const avgScore = Math.round(Object.values(scores).reduce((a: any, b: any) => a + b, 0) / 4);
 
     return (
         <div className="max-w-2xl mx-auto space-y-6">
             {/* Player Header Card */}
             <div className="bg-gradient-to-br from-[#E60000] to-red-700 text-white rounded-2xl p-6 flex items-center gap-4 shadow-lg">
                 <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center text-3xl font-black">
-                    {player.first_name[0]}
+                    {player.first_name?.[0]}
                 </div>
                 <div>
                     <h1 className="text-2xl font-black">{player.first_name} {player.last_name}</h1>
@@ -102,6 +105,13 @@ export default function EvaluatePage() {
                     <div className="text-xs text-red-200 font-semibold">/10 متوسط</div>
                 </div>
             </div>
+
+            {coachId && (
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-bold shadow-sm">
+                    <ShieldAlert className="w-5 h-5 text-amber-600" />
+                    تحذير: أنت تقوم بالتقييم نيابة عن المدرب (وضع الإدارة).
+                </div>
+            )}
 
             {error && <div className="bg-red-50 text-red-600 p-4 rounded-lg border border-red-200">{error}</div>}
             {success && <div className="bg-green-50 text-green-700 p-4 rounded-lg border border-green-200 font-bold">✅ تم إرسال التقييم بنجاح!</div>}
