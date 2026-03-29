@@ -14,6 +14,8 @@ function DashboardContent() {
     const coachId = useCoachId();
 
     useEffect(() => {
+        setLoading(true);
+        setError(null);
         const url = coachId ? `/coach/dashboard?coachId=${coachId}` : '/coach/dashboard';
         fetchApi(url)
             .then(res => setData(res.data.coach))

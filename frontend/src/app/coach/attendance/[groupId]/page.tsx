@@ -31,6 +31,8 @@ function AttendanceContent() {
 
     useEffect(() => {
         if (!groupId) return;
+        setLoading(true);
+        setError(null);
         fetchApi(`/coach/group/${groupId}/players`)
             .then(res => {
                 const ps: Player[] = res.data;

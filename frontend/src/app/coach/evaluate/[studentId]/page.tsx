@@ -54,6 +54,8 @@ function EvaluateContent() {
 
     useEffect(() => {
         if (!studentId) return;
+        setLoading(true);
+        setError(null);
         fetchApi(`/coach/players/${studentId}`)
             .then(res => setPlayer(res.data))
             .catch(err => setError(err.message))
