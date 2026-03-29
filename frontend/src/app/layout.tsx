@@ -1,5 +1,5 @@
-// REBUILD_TRIGGER_TIME: 2026-03-29_22:45
-// Build Version: 1.0.9 - Notification Update v1.5.1
+// REBUILD_TRIGGER_TIME: 2026-03-29_22:50
+// Build Version: 1.0.9 - Notification Update v1.5.2
 import type { Metadata } from "next";
 import { Cairo, Tajawal, Geist } from "next/font/google";
 import "./globals.css";
