@@ -71,11 +71,17 @@ export const createCoach = async (req: Request, res: Response): Promise<void> =>
 export const updateCoach = async (req: Request, res: Response): Promise<void> => {
     try {
         const { id } = req.params;
-        const { full_name, phone, branch_id, is_active } = req.body;
+        const { full_name, phone, branch_id, is_active, permissions } = req.body;
+
+        const updateData: any = { full_name, phone, branch_id, is_active };
+        // Only update permissions if explicitly sent
+        if (permissions !== undefined) {
+            updateData.permissions = permissions;
+        }
 
         const updatedCoach = await prisma.coach.update({
-            where: { id: id as string },
-            data: { full_name, phone, branch_id, is_active }
+            where: { id: String(id) },
+            data: updateData
         });
 
         res.status(200).json({ status: 'success', data: updatedCoach });
@@ -84,6 +90,7 @@ export const updateCoach = async (req: Request, res: Response): Promise<void> =>
         res.status(500).json({ status: 'error', message: 'Internal server error' });
     }
 };
+
 
 export const deleteCoach = async (req: Request, res: Response): Promise<void> => {
     try {

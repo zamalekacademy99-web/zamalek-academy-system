@@ -11,11 +11,20 @@ function CopyCard({ label, value }: { label: string; value: string }) {
         <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-4 py-3">
             <div>
                 <p className="text-xs text-slate-500 mb-0.5">{label}</p>
-                <p className="font-mono text-sm text-slate-900 font-bold" dir="ltr">{value || '—'}</p>
+                <p className="font-mono text-sm text-slate-900 font-bold break-all" dir="ltr">{value || "—"}</p>
             </div>
-            <button onClick={copy} className={`p-2 rounded-md transition ${copied ? 'bg-green-100 text-green-600' : 'bg-white border border-slate-200 hover:bg-slate-100 text-slate-600'}`}>
+            <button onClick={copy} className={`ml-3 flex-shrink-0 p-2 rounded-md transition ${copied ? "bg-green-100 text-green-600" : "bg-white border border-slate-200 hover:bg-slate-100 text-slate-600"}`}>
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
             </button>
+        </div>
+    );
+}
+
+function Toast({ message, type }: { message: string; type: "success" | "error" }) {
+    return (
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl shadow-xl text-sm font-bold flex items-center gap-2
+            ${type === "success" ? "bg-green-600 text-white" : "bg-red-600 text-white"}`}>
+            {type === "success" ? "✅" : "❌"} {message}
         </div>
     );
 }
@@ -46,10 +55,14 @@ export default function AdminPlayerDashboardPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Message to parent
-    const [message, setMessage] = useState('');
+    const [message, setMessage] = useState("");
     const [sendingMsg, setSendingMsg] = useState(false);
-    const [msgSuccess, setMsgSuccess] = useState(false);
+    const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+    const showToast = (msg: string, type: "success" | "error" = "success") => {
+        setToast({ message: msg, type });
+        setTimeout(() => setToast(null), 3500);
+    };
 
     useEffect(() => {
         if (!id) return;
@@ -63,15 +76,14 @@ export default function AdminPlayerDashboardPage() {
         if (!message.trim() || !player?.parent?.id) return;
         setSendingMsg(true);
         try {
-            await fetchApi('/messages', {
-                method: 'POST',
-                body: JSON.stringify({ parent_id: player.parent.id, player_id: player.id, message })
+            await fetchApi("/messages", {
+                method: "POST",
+                body: JSON.stringify({ parent_id: player.parent.id, player_id: player.id, message }),
             });
-            setMessage('');
-            setMsgSuccess(true);
-            setTimeout(() => setMsgSuccess(false), 3000);
+            setMessage("");
+            showToast("تم إرسال الرسالة لولي الأمر بنجاح!");
         } catch (err: any) {
-            alert('فشل إرسال الرسالة: ' + err.message);
+            showToast("فشل الإرسال: " + err.message, "error");
         } finally {
             setSendingMsg(false);
         }
@@ -100,6 +112,7 @@ export default function AdminPlayerDashboardPage() {
 
     return (
         <div className="space-y-6 max-w-5xl mx-auto">
+            {toast && <Toast message={toast.message} type={toast.type} />}
             {/* Hero Card */}
             <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-7 flex flex-wrap items-center gap-5 shadow-xl">
                 <div className="w-20 h-20 bg-[#E60000] rounded-xl flex items-center justify-center text-4xl font-black flex-shrink-0">
@@ -208,11 +221,6 @@ export default function AdminPlayerDashboardPage() {
                         <div className="w-2 h-2 bg-[#E60000] rounded-full" />
                         <h3 className="font-bold text-slate-800">إرسال رسالة لولي الأمر</h3>
                     </div>
-                    {msgSuccess && (
-                        <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl p-3 mb-3 text-sm font-bold">
-                            ✅ تم إرسال الرسالة بنجاح! ستظهر في بوابة ولي الأمر.
-                        </div>
-                    )}
                     <textarea
                         rows={4}
                         value={message}
