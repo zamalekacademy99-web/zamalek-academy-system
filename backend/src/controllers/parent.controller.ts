@@ -4,17 +4,11 @@ import { PrismaClient, RequestType } from '@prisma/client';
 import prisma from '../db';
 
 
-// Helper to get parent_id from authenticated user
-const getParentId = async (userId: string): Promise<string | null> => {
-    const parent = await prisma.parent.findUnique({ where: { user_id: userId } });
-    return parent ? parent.id : null;
-};
-
 // 1. Dashboard Overview
 export const getDashboard = async (req: Request, res: Response): Promise<void> => {
     try {
-        const parentId = await getParentId((req as any).user.id);
-        if (!parentId) { res.status(403).json({ status: 'error', message: 'Parent profile not found' }); return; }
+        const parentId = (req as any).user.parentId;
+        if (!parentId) { res.status(403).json({ status: 'error', message: 'Parent profile not found in session' }); return; }
 
         const players = await prisma.player.findMany({
             where: { parent_id: parentId },
@@ -60,15 +54,20 @@ export const getDashboard = async (req: Request, res: Response): Promise<void> =
 // 2. My Children List
 export const getChildren = async (req: Request, res: Response): Promise<void> => {
     try {
-        const parentId = await getParentId((req as any).user.id);
-        if (!parentId) { res.status(403).json({ status: 'error', message: 'Parent profile not found' }); return; }
+        const parentId = (req as any).user.parentId;
+        if (!parentId) { res.status(403).json({ status: 'error', message: 'Parent profile not found in session' }); return; }
 
         const children = await prisma.player.findMany({
             where: { parent_id: parentId },
             include: {
-                branch: true, group: true, coach: true,
-                schedules: { include: { schedule: { include: { coach: true, branch: true } } } } // if mapped via intermediate, here implies attendance logic or direct schedule link. 
-                // Note: players are linked directly to branch, group, coach so we can infer Schedule from those.
+                branch: true,
+                group: {
+                    include: {
+                        schedules: { include: { branch: true, coach: true, group: true } }
+                    }
+                },
+                coach: true,
+                evaluations: { orderBy: { date: 'desc' }, take: 1 }
             }
         });
 
@@ -83,7 +82,8 @@ export const getChildren = async (req: Request, res: Response): Promise<void> =>
 export const getChildAttendance = async (req: Request, res: Response): Promise<void> => {
     try {
         const { childId } = req.params;
-        const parentId = await getParentId((req as any).user.id);
+        const parentId = (req as any).user.parentId;
+        if (!parentId) { res.status(403).json({ status: 'error', message: 'Unauthorized' }); return; }
 
         // Security check: ensure child belongs to parent
         const child = await prisma.player.findFirst({ where: { id: childId as string, parent_id: parentId as string } });
@@ -103,7 +103,8 @@ export const getChildAttendance = async (req: Request, res: Response): Promise<v
 export const getChildPayments = async (req: Request, res: Response): Promise<void> => {
     try {
         const { childId } = req.params;
-        const parentId = await getParentId((req as any).user.id);
+        const parentId = (req as any).user.parentId;
+        if (!parentId) { res.status(403).json({ status: 'error', message: 'Unauthorized' }); return; }
 
         const child = await prisma.player.findFirst({ where: { id: childId as string, parent_id: parentId as string } });
         if (!child) { res.status(404).json({ status: 'error', message: 'Child not found or unauthorized' }); return; }
@@ -122,7 +123,8 @@ export const getChildPayments = async (req: Request, res: Response): Promise<voi
 export const getChildEvaluations = async (req: Request, res: Response): Promise<void> => {
     try {
         const { childId } = req.params;
-        const parentId = await getParentId((req as any).user.id);
+        const parentId = (req as any).user.parentId;
+        if (!parentId) { res.status(403).json({ status: 'error', message: 'Unauthorized' }); return; }
 
         const child = await prisma.player.findFirst({ where: { id: childId as string, parent_id: parentId as string } });
         if (!child) { res.status(404).json({ status: 'error', message: 'Child not found or unauthorized' }); return; }
@@ -155,7 +157,7 @@ export const getNotifications = async (req: Request, res: Response): Promise<voi
 // 5. Submit Request
 export const submitRequest = async (req: Request, res: Response): Promise<void> => {
     try {
-        const parentId = await getParentId((req as any).user.id);
+        const parentId = (req as any).user.parentId;
         if (!parentId) { res.status(403).json({ status: 'error', message: 'Parent profile not found' }); return; }
 
         const { type, message, child_id } = req.body;

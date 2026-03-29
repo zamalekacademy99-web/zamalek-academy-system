@@ -242,7 +242,7 @@ export default function PortalDashboard() {
             {children.some((c: any) => c.evaluations?.length > 0) && (
                 <div>
                     <h3 className="text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
-                        ⭐ تقدم الأداء
+                        ⭐ تقييم الأداء الأخير
                     </h3>
                     <div className="space-y-4">
                         {children.map((child: any) => {

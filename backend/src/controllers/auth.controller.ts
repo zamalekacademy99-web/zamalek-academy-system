@@ -27,12 +27,17 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         }
 
         let coachId: string | null = null;
+        let parentId: string | null = null;
+
         if ((user.role as string) === 'COACH') {
             const coach = await prisma.coach.findUnique({ where: { user_id: user.id } });
             coachId = coach?.id ?? null;
+        } else if ((user.role as string) === 'PARENT') {
+            const parent = await prisma.parent.findUnique({ where: { user_id: user.id } });
+            parentId = parent?.id ?? null;
         }
 
-        const token = generateToken({ id: user.id, role: user.role, coachId });
+        const token = generateToken({ id: user.id, role: user.role, coachId, parentId });
 
         res.status(200).json({
             status: 'success',
@@ -44,6 +49,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
                     email: user.email,
                     role: user.role,
                     coachProfile: coachId ? { id: coachId } : null,
+                    parentProfile: parentId ? { id: parentId } : null,
                 },
             },
         });

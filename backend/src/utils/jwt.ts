@@ -8,6 +8,7 @@ export interface TokenPayload {
     id: string;
     role: Role;
     coachId?: string | null;
+    parentId?: string | null;
 }
 
 
