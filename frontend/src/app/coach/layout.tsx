@@ -10,8 +10,9 @@ export default function CoachLayout({ children }: { children: React.ReactNode })
     const navItems = [
         { name: "لوحتي", href: "/coach/dashboard", icon: Home },
         { name: "تسجيل الحضور", href: "/coach/attendance", icon: ClipboardList },
-        { name: "تقييم اللاعبين", href: "/coach/evaluations", icon: Star },
+        { name: "تقييم اللاعبين", href: "/coach/evaluations/", icon: Star },
     ];
+
 
 
     const handleLogout = () => {
