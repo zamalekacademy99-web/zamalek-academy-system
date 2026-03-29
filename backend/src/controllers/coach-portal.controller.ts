@@ -1,48 +1,78 @@
 import { Request, Response } from 'express';
 import prisma from '../db'; // use shared instance, not new PrismaClient()
 
-// GET /api/v1/coach/dashboard
-export const getCoachDashboard = async (req: Request, res: Response): Promise<void> => {
+// GET /api/v1/coach/profile
+export const getCoachProfile = async (req: Request, res: Response): Promise<void> => {
     try {
-        let userId = (req as any).user?.id;
+        const coachId = (req as any).user?.coachId;
         const role = (req as any).user?.role;
         const impersonateId = req.query.coachId as string;
 
-        let coach;
+        let targetId = coachId;
         if (impersonateId && (role === 'ADMIN' || role === 'SUPER_ADMIN')) {
-            // Admin is viewing a specific coach portal
-            coach = await (prisma as any).coach.findUnique({
-                where: { id: impersonateId },
-                include: {
-                    groups: {
-                        include: {
-                            players: { select: { id: true, first_name: true, last_name: true } },
-                            schedules: { include: { branch: true } }
-                        }
-                    },
-                    schedules: { include: { branch: true, group: true } },
-                    branch: true
-                }
-            });
-        } else {
-            // Regular coach view
-            if (!userId) { res.status(401).json({ success: false, message: 'Unauthorized' }); return; }
-            coach = await (prisma as any).coach.findUnique({
-                where: { user_id: userId },
-                include: {
-                    groups: {
-                        include: {
-                            players: { select: { id: true, first_name: true, last_name: true } },
-                            schedules: { include: { branch: true } }
-                        }
-                    },
-                    schedules: { include: { branch: true, group: true } },
-                    branch: true
-                }
-            });
+            targetId = impersonateId;
         }
 
-        if (!coach) { res.status(404).json({ success: false, message: 'Coach profile not found.' }); return; }
+        if (!targetId) {
+            res.status(404).json({ success: false, message: 'Coach ID not found in session.' });
+            return;
+        }
+
+        const coach = await (prisma as any).coach.findUnique({
+            where: { id: targetId },
+            include: { branch: true, user: { select: { email: true, name: true } } }
+        });
+
+        if (!coach) {
+            res.status(404).json({ success: false, message: 'Coach profile not found.' });
+            return;
+        }
+
+        res.json({ success: true, data: coach });
+    } catch (err: any) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// GET /api/v1/coach/dashboard
+export const getCoachDashboard = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const coachId = (req as any).user?.coachId;
+        const role = (req as any).user?.role;
+        const impersonateId = req.query.coachId as string;
+
+        let targetId = coachId;
+        if (impersonateId && (role === 'ADMIN' || role === 'SUPER_ADMIN')) {
+            targetId = impersonateId;
+        }
+
+        if (!targetId) {
+            // Fallback to user_id if coachId not in token yet (for older tokens)
+            const userId = (req as any).user?.id;
+            const coach = await (prisma as any).coach.findUnique({ where: { user_id: userId } });
+            targetId = coach?.id;
+        }
+
+        if (!targetId) {
+            res.status(404).json({ success: false, message: 'Coach profile not found.' });
+            return;
+        }
+
+        const coach = await (prisma as any).coach.findUnique({
+            where: { id: targetId },
+            include: {
+                groups: {
+                    include: {
+                        players: { select: { id: true, first_name: true, last_name: true } },
+                        schedules: { include: { branch: true } }
+                    }
+                },
+                schedules: { include: { branch: true, group: true } },
+                branch: true
+            }
+        });
+
+        if (!coach) { res.status(404).json({ success: false, message: 'Coach data not found.' }); return; }
 
         const todayDow = new Date().getDay();
         const todaySchedules = coach.schedules.filter((s: any) => s.day_of_week === todayDow);
@@ -64,6 +94,7 @@ export const getCoachDashboard = async (req: Request, res: Response): Promise<vo
         res.status(500).json({ success: false, message: err.message || 'Server error' });
     }
 };
+
 
 // GET /api/v1/coach/group/:groupId/players
 export const getGroupPlayers = async (req: Request, res: Response): Promise<void> => {
@@ -108,14 +139,15 @@ export const submitAttendance = async (req: Request, res: Response): Promise<voi
                     date: dateObj,
                     status: r.status,
                     notes: r.notes || null
-                },
+                } as any,
                 update: {
                     status: r.status,
                     coach_id: coach.id,
                     notes: r.notes || null
-                }
+                } as any
             })
         );
+
 
         await prisma.$transaction(upsertOps);
         res.json({ success: true, message: `Saved attendance for ${records.length} players.` });

@@ -52,24 +52,25 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
 
-      if (res.status === 'success') {
-        const userRole = res.data.user.role;
-        let redirectPath = '/';
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('user', JSON.stringify(res.data.user));
 
-        if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN' || userRole === 'MANAGEMENT') {
-          redirectPath = '/admin/dashboard';
-        } else if (userRole === 'PARENT') {
-          redirectPath = '/portal';
+      const userRole = res.data.user.role;
+      let redirectPath = '/';
+
+      if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN' || userRole === 'MANAGEMENT') {
+        redirectPath = '/admin/dashboard';
+      } else if (userRole === 'COACH') {
+        redirectPath = '/coach/dashboard';
+        if (res.data.user.coachProfile?.id) {
+          localStorage.setItem('adminViewCoachId', res.data.user.coachProfile.id);
         }
-
-        localStorage.setItem('token', res.data.token);
-        localStorage.setItem('user', JSON.stringify(res.data.user));
-
-        if (res.data.user.coachId) {
-          localStorage.setItem('adminViewCoachId', res.data.user.coachId);
-        }
-
+      } else if (userRole === 'PARENT') {
+        redirectPath = '/portal';
       }
+
+      router.push(redirectPath);
+
     } catch (err: any) {
       setError(err.message || 'بيانات الدخول غير صحيحة، يرجى المحاولة مرة أخرى.');
     } finally {

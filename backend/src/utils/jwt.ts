@@ -7,7 +7,9 @@ const EXPIRES_IN = '1d';
 export interface TokenPayload {
     id: string;
     role: Role;
+    coachId?: string | null;
 }
+
 
 export const generateToken = (payload: TokenPayload): string => {
     return jwt.sign(payload, JWT_SECRET, { expiresIn: EXPIRES_IN });

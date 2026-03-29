@@ -4,17 +4,21 @@ import {
     getGroupPlayers,
     submitAttendance,
     submitEvaluation,
-    getPlayerForEval
+    getPlayerForEval,
+    getCoachProfile
 } from '../controllers/coach-portal.controller';
-import { authenticate, authorize } from '../middlewares/auth.middleware';
+import { Role } from '@prisma/client';
 
 const router = Router();
 
 // All coach-portal routes require authentication
 router.use(authenticate);
-router.use(authorize(['COACH', 'SUPER_ADMIN', 'ADMIN']));
+router.use(authorize([Role.COACH, Role.SUPER_ADMIN, Role.ADMIN]));
+
 
 router.get('/dashboard', getCoachDashboard);
+router.get('/profile', getCoachProfile);
+
 router.get('/group/:groupId/players', getGroupPlayers);
 router.post('/attendance', submitAttendance);
 router.post('/evaluate', submitEvaluation);
