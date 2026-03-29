@@ -1,5 +1,8 @@
 node_modules
 # Keep environment variables out of version control
 .env
+# Never commit compiled output — Railway compiles it during build
+dist/
+
 
 /src/generated/prisma
