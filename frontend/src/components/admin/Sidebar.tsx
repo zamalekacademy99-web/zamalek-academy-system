@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-    Users, Home, CalendarDays, Wallet, UserCircle, Settings, ClipboardList
+    Users, Home, CalendarDays, Wallet, UserCircle, Settings, ClipboardList, Layers
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -11,7 +11,8 @@ export default function Sidebar() {
     const navItems = [
         { name: "الرئيسية", href: "/admin/dashboard", icon: Home },
         { name: "اللاعبين", href: "/admin/players", icon: Users },
-        { name: "الفروع والمجموعات", href: "/admin/branches", icon: ClipboardList },
+        { name: "الفروع", href: "/admin/branches", icon: ClipboardList },
+        { name: "المجموعات", href: "/admin/groups", icon: Layers },
         { name: "المدربين", href: "/admin/coaches", icon: UserCircle },
         { name: "الحضور", href: "/admin/attendance", icon: CalendarDays },
         { name: "الجداول", href: "/admin/schedules", icon: CalendarDays },
