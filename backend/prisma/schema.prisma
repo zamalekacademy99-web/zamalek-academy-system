@@ -342,3 +342,12 @@ model ParentMessage {
 
   @@map("parent_messages")
 }
+
+model SystemConfig {
+  id         String   @id @default(uuid()) @db.Uuid
+  key        String   @unique
+  value      String   @db.Text
+  updated_at DateTime @updatedAt
+
+  @@map("system_configs")
+}
